@@ -19,6 +19,7 @@
       <a href="#atomic">Atomic tasks</a>
       <a href="#clips">Clip detection</a>
       <a href="#providers">Gen providers</a>
+      <a href="#mcp">MCP layer</a>
       <a href="#learning">Learning</a>
       <a href="#stack">Tech stack</a>
       <a href="#run">Run it</a>
@@ -238,6 +239,75 @@ flowchart LR
     </div>
 
     <div class="callout"><b>GTX 1060 reality:</b> good for <em>scripting</em> (Claude, remote) and <em>local TTS</em> (Kokoro/Piper). Production video &amp; music generation need cloud (32 GB+ VRAM); the 1060 can only prototype tiny quantized clips slowly. So the generative layer is <b>cloud APIs via fal.ai</b>, while the footage pipeline runs fully local.</div>
+  </div>
+</section>
+
+<!-- MCP -->
+<section id="mcp">
+  <div class="wrap">
+    <div class="kicker">Follow-up · MCP servers for the generative layer</div>
+    <h2>The MCP layer</h2>
+    <p class="lede">MCP (Anthropic's open Model Context Protocol) is how Claude reaches the generators as <b>tools</b> — search a model, check its schema, run it, get the file back — without a bespoke integration per provider. In 2026 nearly every media provider ships one. ReelForge uses MCP for the <b>agentic</b> work and direct SDK/API calls for the <b>deterministic</b> work; both hit the same providers.</p>
+
+    <div class="callout info"><b>Two ways in, on purpose.</b> <b>MCP (agentic):</b> Claude plans a shot list, writes prompts, calls a generator, looks at the result, and re-rolls — interactive, in the ideation/generative-build loop and the review console. <b>Direct API via a thin adapter (deterministic):</b> the Prefect <code>op_gen_*</code> tasks call the provider SDK for reproducible, retryable, cacheable batch runs. Same provider (e.g. fal), two entry points — so a run is repeatable but Claude can still improvise.</div>
+
+    <h3 style="margin:28px 0 12px">Aggregators — one MCP, hundreds of models (adopt first)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>MCP server</th><th>Status</th><th>Endpoint</th><th>Covers</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td class="rec">fal.ai MCP</td><td><span class="badge-s b-pick">official · hosted</span></td><td><code>mcp.fal.ai/mcp</code></td><td>1,000+ models: image, video, audio, 3D, upscale (Veo, Kling, Luma, Runway, Pika, Flux…)</td><td>Free (pay per run); search + schema + run. One <code>generate-media</code> surface → the whole plan's <code>model_id</code> swap.</td></tr>
+          <tr><td>Replicate MCP</td><td><span class="badge-s b-pick">official · hosted</span></td><td><code>mcp.replicate.com</code></td><td>Thousands of models across modalities</td><td>Widest catalog; search / create prediction / poll status. Good fallback + prototyping.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:26px 0 12px">Official single-provider MCPs (add where each is best)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>MCP server</th><th>Status</th><th>Modality</th><th>Notes for ReelForge</th></tr></thead>
+        <tbody>
+          <tr><td class="rec">MiniMax MCP</td><td><span class="badge-s b-pick">official</span></td><td>TTS · voice clone · voice design · image · video (Hailuo-02) · music (music-1.5)</td><td>One official server spanning voice+image+video+music — great single dependency for generative (kids) mode. Python & JS, stdio/SSE.</td></tr>
+          <tr><td class="rec">ElevenLabs MCP</td><td><span class="badge-s b-pick">official</span></td><td>TTS · STT · voices (20+ tools)</td><td>Best-in-class voice for premium VO; free tier 10k credits. Local Kokoro stays the cheap default.</td></tr>
+          <tr><td>Google Gemini / Veo MCP</td><td><span class="badge-s b-paid">SDK-native + community</span></td><td>Veo 3.1 video · Nano&nbsp;Banana / Imagen image</td><td>Gemini SDK has built-in MCP; community servers expose Veo+images. Note: Imagen retires Aug 17 2026 → Nano Banana; "Gemini Omni" is replacing Veo in-app.</td></tr>
+          <tr><td>Stability AI MCP</td><td><span class="badge-s b-oss">community</span></td><td>Image gen/edit/upscale; Stable Audio</td><td>Pair with <b>Stable Audio 3</b> (May 2026): small/medium now <b>open-weight, CPU-capable</b> — commercial-safe music that can run locally. Large = API.</td></tr>
+          <tr><td>Suno MCP</td><td><span class="badge-s b-paid" style="background:rgba(255,107,107,.14);color:#ff6b6b">unofficial ⚠</span></td><td>Full songs w/ vocals + lyrics</td><td>Community wrappers (suno-mcp, AceDataCloud) hit internal/relay endpoints — ToS + licensing risk. Prefer Stable Audio for commercial. Use only for throwaway experiments.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:26px 0 12px">Understanding, not just generating</h3>
+    <div class="card" style="border-color:#2a5c72">
+      <h3>🔎 TwelveLabs MCP <span class="badge-s b-pick" style="margin-left:6px">official</span></h3>
+      <p>Video-<em>understanding</em> MCP (Marengo + Pegasus): natural-language search across footage, plus auto summaries, chapters, and <b>highlights</b> — endpoint <code>mcp-alpic.twelvelabs.io/try</code>. It's the cloud counterpart to Stage 3's local signals: when the deterministic fusion needs a <em>semantic</em> "find the funny near-miss" query, this answers it via MCP. Cloud/paid, so it augments — not replaces — the local OSS signal stack.</p>
+    </div>
+
+    <h3 style="margin:26px 0 14px">Where MCP plugs into the pipeline</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  C["Claude (orchestrator)"]
+  subgraph GENMCP["Generation MCPs"]
+    F["fal.ai MCP · mcp.fal.ai"]
+    R["Replicate MCP"]
+    MM["MiniMax MCP"]
+    EL["ElevenLabs MCP"]
+    GV["Gemini/Veo MCP"]
+  end
+  subgraph UNDMCP["Understanding MCP"]
+    TL["TwelveLabs MCP"]
+  end
+  C -- "plan · prompt · re-roll" --> GENMCP
+  C -- "semantic clip search" --> TL
+  GENMCP --> PROV["Provider models: Veo · Kling · Luma · Runway · Flux · music · TTS"]
+  subgraph DET["Deterministic Prefect ops (batch)"]
+    A["adapters/ (thin SDK wrappers)"]
+  end
+  A -- "same providers, reproducible" --> PROV
+  A -.local default.-> LOC["Kokoro TTS · Stable Audio 3 (CPU) · OSS signals"]
+      </pre>
+    </div>
+    <div class="callout good"><b>Design rule added to the plan:</b> adopt <b>fal.ai MCP</b> as the default generative surface (+ Replicate fallback); layer <b>MiniMax</b> and <b>ElevenLabs</b> official MCPs for voice/music/video; wire <b>TwelveLabs MCP</b> into Stage 3 for semantic highlight queries. Every generator stays a swappable <code>model_id</code>; unofficial MCPs (Suno) are flagged and off the commercial path.</div>
   </div>
 </section>
 

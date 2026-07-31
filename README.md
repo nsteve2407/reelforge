@@ -10,6 +10,8 @@
 
 Of ~40 atomic tasks, only **5** genuinely need an LLM (ideation, scripting, media-prompt writing, multimodal safety judgment, feedback synthesis) — and each is profile-gated. Everything else is **deterministic OSS / classical**: ingest, scene detection, transcription, audio/motion/telemetry signals, highlight fusion, cutting, reframing, captions, color grade, upload, analytics, bandit selection, scoring, attribution. **Claude has zero native media generation** — it writes words/prompts, judges, and orchestrates; pixels & audio come from specialist models via an aggregator (fal.ai). See the deep dive for the full per-task table.
 
+**MCP layer:** Claude reaches the generators as tools via Model Context Protocol — **fal.ai MCP** (`mcp.fal.ai`, 1,000+ models) as the default aggregator surface, plus official **MiniMax** (voice/image/video/music), **ElevenLabs** (voice), and **Gemini/Veo** MCPs, and **TwelveLabs MCP** for semantic video-understanding in the clip-detection stage. MCP drives the *agentic* loop; deterministic Prefect ops call the same providers directly via thin adapters for reproducible batch runs. Unofficial MCPs (e.g. Suno) are flagged off the commercial path.
+
 ---
 
 ## The idea in one line
