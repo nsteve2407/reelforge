@@ -2,7 +2,7 @@
 
 **A generic, config-driven pipeline that turns raw footage _or_ a text brief into platform-ready YouTube Shorts & Instagram Reels — for any niche.**
 
-> Status: **plan & elevator pitch (pre-implementation).** This repo is the design + research. Code comes next, phase by phase.
+> Status: **Phase 0–1 built** (footage MVP: multi-signal highlights → 9:16 draft → review gate, 30 tests green). Phases 2+ (publish, generative, learning) planned. The site (`index.html` / `deep-dive.html`) is the design/research.
 
 📄 **Live pitch / plan → [GitHub Pages site](https://nsteve2407.github.io/reelforge/)**  ·  🔬 **[Deep dive: LLM-usage map, atomic tasks, providers, learning loop & stack](https://nsteve2407.github.io/reelforge/deep-dive.html)**
 
@@ -68,25 +68,47 @@ publish: { platforms: [youtube_shorts, instagram_reels], approval: required }
 
 ## Roadmap
 
-| Phase | Deliverable |
-|-------|-------------|
-| 0 | Profile schema, connectors, state store, orchestrator skeleton |
-| 1 | Footage MVP (bikes) → draft + notify + manual upload |
-| 2 | Auto-publish (YT/IG APIs) + scheduling + trend research |
-| 3 | Generative mode (kids) with COPPA + disclosure + mandatory review |
-| 4 | Hybrid mode (TV talk) + analytics feedback loop |
-| 5 | Multi-channel scale, budget guardrails, dashboards |
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| 0 | Profile schema, storage, state ledger, op contract | ✅ **built** |
+| 1 | Footage MVP (bikes) → multi-signal highlights → 9:16 draft → review card | ✅ **built** |
+| 2 | Auto-publish (YT/IG APIs) + scheduling + trend research | next |
+| 3 | Generative mode (kids) with COPPA + disclosure + mandatory review | planned |
+| 4 | Hybrid mode (TV talk) + analytics feedback loop | planned |
+| 5 | Multi-channel scale, budget guardrails, dashboards | planned |
+
+## Quickstart (footage MVP)
+
+Local-first. Needs `ffmpeg`/`ffprobe` and Python 3.10+ (a `.venv` via [uv](https://astral.sh/uv) is easiest).
+
+```bash
+uv venv --python 3.12 .venv
+uv pip install --python .venv/bin/python -e .
+
+.venv/bin/python -m reelforge.cli doctor            # check ffmpeg/opencv/scenedetect
+.venv/bin/python -m reelforge.cli profiles          # list ContentProfiles
+.venv/bin/python -m reelforge.cli run --profile bike_pov --demo   # synth a clip & run
+.venv/bin/python -m reelforge.cli run --profile bike_pov --input ride.mp4
+.venv/bin/python -m pytest                          # 30 tests
+```
+
+A run ingests → detects scenes / audio-energy / motion (+ action-cam telemetry if present) → **fuses signals classically** (normalize → weight → `scipy` peaks → soft-NMS) → cuts the top highlights → reframes to 9:16 → color-grades → (optional captions) → renders a draft → writes a **review card** and stops at the approval gate. Nothing publishes without approval. Captions need the optional `faster-whisper` extra; absent, they're skipped gracefully.
 
 ## Repo layout
 
 ```
-index.html      # GitHub Pages pitch site
-styles.css
-profiles/       # example ContentProfile configs (the generic contract)
-  bike_pov.yaml
-  nursery_rhymes.yaml
-  tv_series_talk.yaml
+index.html  styles.css  deep-dive.html   # GitHub Pages pitch + deep dive
+profiles/                 # ContentProfile configs (bike_pov, nursery_rhymes, tv_series_talk)
+pyproject.toml
+src/reelforge/
+  core/     # profile · storage · state (SQLite ledger) · media (ffmpeg) · op decorator · types
+  ops/      # atomic single-responsibility ops: ingest · understand · build · review
+  flows/    # footage.py — composes ops into the pipeline (Prefect-ready)
+  cli.py    # typer CLI: doctor / profiles / ops / run
+tests/      # 30 tests: unit (pure fusion/selection/ASS) + real-ffmpeg integration + e2e flow
 ```
+
+> Orchestration note: ops are pure functions composed by `flows/footage.py`; each maps 1:1 onto a Prefect `@task` when moving to a durable orchestrator — that's the only change. Storage is a local backend behind an fsspec-shaped interface (S3/GCS drop in later).
 
 ---
 

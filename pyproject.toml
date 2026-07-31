@@ -1,0 +1,34 @@
+[project]
+name = "reelforge"
+version = "0.1.0"
+description = "Generic, config-driven pipeline turning raw footage or briefs into Shorts/Reels."
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "pyyaml",
+    "numpy",
+    "scipy",
+    "scenedetect>=0.7",
+    "opencv-python-headless",
+    "ffmpeg-python",
+    "typer",
+]
+
+[project.optional-dependencies]
+captions = ["faster-whisper"]     # optional: Whisper transcription for burned-in captions
+dev = ["pytest"]
+
+[project.scripts]
+reelforge = "reelforge.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reelforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# venv / tooling
+.venv/
+.python-version
+
+# ReelForge runtime output
+.rf_work/
+.rf_smoke*/
+*.db
+*.sqlite
