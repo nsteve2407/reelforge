@@ -75,6 +75,8 @@ def run(
     profiles_dir: str = typer.Option("profiles", help="profiles directory"),
     work: str = typer.Option(".rf_work", help="working directory"),
     auto_approve: bool = typer.Option(False, help="skip the approval stop"),
+    publish: bool = typer.Option(False, help="publish after approval (needs --auto-approve)"),
+    live: bool = typer.Option(False, help="real upload instead of dry-run (needs creds)"),
 ) -> None:
     """Run the footage pipeline end to end (stops at the review gate)."""
     from .flows import run_footage  # lazy: avoids importing heavy deps for --help
@@ -92,13 +94,32 @@ def run(
         typer.echo(f"input not found: {src}"); raise typer.Exit(code=1)
 
     typer.echo(f"running profile '{prof.id}' on {src}")
-    result = run_footage(src, prof, work_root=work, auto_approve=auto_approve)
+    result = run_footage(src, prof, work_root=work, auto_approve=auto_approve,
+                         publish=publish, dry_run=not live)
     typer.echo("")
     for k, v in result.items():
         typer.echo(f"  {k:14} {v}")
     if result.get("status") == "awaiting_approval":
         typer.echo(f"\nReview card: {result['review_card']}")
-        typer.echo("Approve then publish (publishing is a later phase).")
+        typer.echo(f"Approve, then: reelforge publish --run {result['run_id']} "
+                   f"--profile {prof.id} --work {work}")
+
+
+@app.command()
+def publish(
+    run: str = typer.Option(..., help="run id to publish"),
+    profile: str = typer.Option(..., help="profile id or path"),
+    profiles_dir: str = typer.Option("profiles", help="profiles directory"),
+    work: str = typer.Option(".rf_work", help="working directory"),
+    live: bool = typer.Option(False, help="real upload instead of dry-run (needs creds)"),
+) -> None:
+    """Publish an approved run's draft to its target platforms (dry-run by default)."""
+    from .flows import publish_run
+
+    prof = load_profile(profile, profiles_dir=profiles_dir)
+    result = publish_run(run, prof, work_root=work, dry_run=not live)
+    for k, v in result.items():
+        typer.echo(f"  {k:14} {v}")
 
 
 if __name__ == "__main__":

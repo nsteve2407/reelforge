@@ -41,6 +41,12 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_run ON events(run_id);
 CREATE INDEX IF NOT EXISTS idx_assets_run ON assets(run_id);
+CREATE TABLE IF NOT EXISTS quota (
+    platform TEXT NOT NULL,
+    day      TEXT NOT NULL,
+    units    INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (platform, day)
+);
 """
 
 
@@ -131,6 +137,22 @@ class Ledger:
             "SELECT * FROM events WHERE run_id=? ORDER BY id", (run_id,)
         ).fetchall()
         return [dict(r) for r in rows]
+
+    # ---- quota ----
+    def quota_used(self, platform: str, day: str) -> int:
+        row = self.conn.execute(
+            "SELECT units FROM quota WHERE platform=? AND day=?", (platform, day)
+        ).fetchone()
+        return int(row["units"]) if row else 0
+
+    def add_quota(self, platform: str, day: str, units: int) -> int:
+        self.conn.execute(
+            "INSERT INTO quota(platform,day,units) VALUES (?,?,?) "
+            "ON CONFLICT(platform,day) DO UPDATE SET units = units + excluded.units",
+            (platform, day, units),
+        )
+        self.conn.commit()
+        return self.quota_used(platform, day)
 
     def close(self) -> None:
         self.conn.close()

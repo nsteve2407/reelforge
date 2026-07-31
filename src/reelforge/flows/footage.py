@@ -19,7 +19,7 @@ from ..core.profile import ContentProfile, SourceMode
 from ..core.state import Ledger
 from ..core.storage import Storage
 from ..core.types import SignalTrack
-from ..ops import ingest, understand, build, review
+from ..ops import ingest, understand, build, review, publish as pub
 
 # Default fusion weights per signal; profile.understand.score_for can re-bias.
 _DEFAULT_WEIGHTS = {
@@ -46,6 +46,9 @@ def run_footage(
     work_root: str | Path = ".rf_work",
     db_path: Optional[str | Path] = None,
     auto_approve: bool = False,
+    publish: bool = False,
+    dry_run: bool = True,
+    creds: dict | None = None,
 ) -> dict:
     if profile.source.mode is SourceMode.generative:
         raise ValueError(
@@ -121,6 +124,21 @@ def run_footage(
 
         status = "awaiting_approval" if approval_required else "approved"
         ledger.update_run(run_id, status, {"draft": str(draft)})
+
+        # ---- publish (only when approved) ----
+        published: list[dict] = []
+        if status == "approved" and publish:
+            ledger.update_run(run_id, "publishing")
+            for platform in profile.publish.platforms:
+                res = pub.op_publish(ctx, draft, platform, dry_run=dry_run, creds=creds)
+                published.append({"platform": platform, "ok": res.ok,
+                                  "url": res.outputs.get("url"),
+                                  "dry_run": res.outputs.get("dry_run"),
+                                  "message": res.message})
+            any_ok = any(p["ok"] for p in published)
+            status = "published" if any_ok else "publish_failed"
+            ledger.update_run(run_id, status)
+
         return {
             "run_id": run_id,
             "status": status,
@@ -129,10 +147,51 @@ def run_footage(
             "review_card": notify.outputs["card"],
             "n_highlights": len(highlights),
             "n_clips": len(clips),
+            "published": published,
             "workdir": str(storage.root),
         }
     except Exception as e:  # noqa: BLE001
         ledger.update_run(run_id, "error", {"error": f"{type(e).__name__}: {e}"})
         raise
+    finally:
+        ledger.close()
+
+
+def publish_run(
+    run_id: str,
+    profile: ContentProfile,
+    *,
+    work_root: str | Path = ".rf_work",
+    db_path: Optional[str | Path] = None,
+    dry_run: bool = True,
+    creds: dict | None = None,
+) -> dict:
+    """Publish the draft of a previously-approved run to its target platforms."""
+    work_root = Path(work_root)
+    ledger = Ledger(db_path or work_root / "reelforge.db")
+    try:
+        run = ledger.get_run(run_id)
+        if not run:
+            raise ValueError(f"run not found: {run_id}")
+        draft = run.get("meta", {}).get("draft")
+        if not draft:
+            drafts = ledger.list_assets(run_id, "draft")
+            draft = drafts[-1]["path"] if drafts else None
+        if not draft or not Path(draft).exists():
+            raise FileNotFoundError(f"no draft found for run {run_id}")
+        storage = Storage(work_root / run_id)
+        ctx = OpContext(run_id=run_id, profile=profile, storage=storage, ledger=ledger)
+        ledger.update_run(run_id, "publishing")
+        published = []
+        for platform in profile.publish.platforms:
+            res = pub.op_publish(ctx, draft, platform, dry_run=dry_run, creds=creds)
+            published.append({"platform": platform, "ok": res.ok,
+                              "url": res.outputs.get("url"),
+                              "dry_run": res.outputs.get("dry_run"),
+                              "message": res.message})
+        status = "published" if any(p["ok"] for p in published) else "publish_failed"
+        ledger.update_run(run_id, status)
+        return {"run_id": run_id, "status": status, "draft": draft,
+                "published": published}
     finally:
         ledger.close()
