@@ -1,0 +1,64 @@
+# ReelForge ContentProfile — hybrid mode
+# TV-series discussion / hot takes: your voice + AI-generated b-roll.
+id: tv_series_talk
+niche: "TV series recaps, theories & hot takes"
+channel:
+  youtube: "@YourTVTakesCh"
+  instagram: "yourtvtakes.ig"
+
+audience:
+  intent: [community, inform]    # Axis A
+  segment: gen_z_millennial      # Axis B
+  relationship: superfan         # Axis C
+  age: "18-40"
+  tone: opinionated_playful
+
+source:
+  mode: hybrid                   # real narration + generative cutaways
+  connectors: [local, gdrive]    # optional talking-head/voice takes
+
+research:
+  enabled: true
+  signals: [youtube_trending, google_trends, tiktok_cc, instagram]
+  time_sensitive: true           # publish within hours of episode drop
+  ideas_per_run: 5
+
+understand:
+  transcribe: whisper            # for your own narration takes
+
+generate:
+  script: claude                 # spicy-but-fair take, outline, hook
+  broll:
+    source: generative           # AI cutaways / licensed stills only
+    provider: veo                 # native audio
+    # NEVER re-upload copyrighted show frames — commentary/fair-use only
+  voiceover:
+    enabled: true                # or use your own recorded voice
+    provider: cartesia
+
+edit:
+  aspect_ratio: "9:16"
+  length_s: [20, 60]
+  hook_first: true
+  captions:
+    enabled: true
+    style: bold_dynamic
+    lang: en
+  color_grade:
+    lut: clean_bright            # or moody to match the show
+    look: crisp_modern
+  music:
+    source: stable_audio
+    mood: tension_underscore
+
+publish:
+  platforms: [youtube_shorts, instagram_reels]
+  schedule: asap_on_trigger      # ride the episode-drop spike
+  daily_cap: 3
+  approval: required
+  ai_disclosure: true            # b-roll is synthetic
+  made_for_kids: false
+  hashtags: ["#Shorts", "#tvshow", "#theory", "#recap"]
+
+budget:
+  max_usd_per_video: 2.50

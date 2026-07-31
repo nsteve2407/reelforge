@@ -1,0 +1,62 @@
+# ReelForge ContentProfile — generative mode
+# AI-animated nursery rhymes. No footage required.
+id: nursery_rhymes
+niche: "original animated nursery rhymes & lullabies"
+channel:
+  youtube: "@YourRhymesCh"
+  instagram: "yourrhymes.ig"
+
+audience:
+  intent: [comfort, educate]     # Axis A
+  segment: toddlers_0_5          # Axis B (+ parents as proxy)
+  relationship: curious_newcomer # Axis C
+  age: "0-5"
+  tone: warm_gentle
+
+source:
+  mode: generative               # brief -> song -> scenes -> video
+  connectors: []                 # nothing to ingest
+
+research:
+  enabled: true
+  signals: [youtube_trending, google_trends]
+  ideas_per_run: 3
+  serialize_characters: true     # consistent cast across episodes
+
+generate:
+  script: claude                 # writes rhyme + scene list
+  music:
+    source: stable_audio         # or Suno/Udio (licensing caveat)
+    mood: soft_singalong
+  voiceover:
+    enabled: true
+    provider: inworld            # OSS alt: kokoro
+    voice: warm_friendly_narrator
+  animation:
+    provider: kling              # turnkey alt: atlabs / steve_ai
+    style: cozy_plush            # 3d_cartoon | soft_pastel_2d | kawaii
+    scenes_per_video: 6
+
+edit:
+  aspect_ratio: "9:16"
+  length_s: [30, 60]
+  hook_first: true
+  captions:
+    enabled: true
+    style: singalong_lyrics
+    lang: en
+  color_grade:
+    lut: pastel_soft
+    look: warm_storybook
+
+publish:
+  platforms: [youtube_shorts, instagram_reels]
+  schedule: best_time
+  daily_cap: 1
+  approval: required             # MANDATORY — kids safety needs human eyes
+  ai_disclosure: true            # synthetic media disclosure on
+  made_for_kids: true            # COPPA: disables personalized ads/comments
+  hashtags: ["#Shorts", "#nurseryrhymes", "#kidssongs"]
+
+budget:
+  max_usd_per_video: 6.00        # generative video credits dominate

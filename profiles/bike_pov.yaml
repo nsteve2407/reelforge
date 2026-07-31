@@ -1,0 +1,62 @@
+# ReelForge ContentProfile — footage mode
+# Bike POV shorts cut from real Insta360 rides.
+id: bike_pov
+niche: "mountain & city cycling POV"
+channel:
+  youtube: "@YourBikeCh"
+  instagram: "yourbike.ig"       # must be a Business account for API publishing
+
+audience:
+  intent: [entertain, inspire]   # Axis A
+  segment: gen_z_millennial      # Axis B
+  relationship: hobbyist_enthusiast  # Axis C
+  age: "18-34"
+  tone: high_energy
+
+source:
+  mode: footage                  # footage | generative | hybrid
+  connectors: [insta360_cloud, gdrive, local]
+  watch: true                    # auto-pull new files
+  proxy_transcode: true          # fast, low-res copies for analysis
+
+research:
+  enabled: true
+  signals: [youtube_trending, google_trends, tiktok_cc, instagram]
+  ideas_per_run: 5
+
+understand:
+  scene_detect: pyscenedetect
+  transcribe: whisper
+  highlight_scorer: claude_vision
+  score_for: [speed, near_miss, scenery, air_time]
+
+edit:
+  aspect_ratio: "9:16"
+  length_s: [15, 45]
+  clips_per_video: [2, 4]
+  hook_first: true
+  reframe: subject_track
+  captions:
+    enabled: true
+    style: karaoke_bold
+    lang: en
+  color_grade:
+    lut: teal_orange_punch
+    look: vivid_action
+  music:
+    source: stable_audio         # clean commercial licensing
+    mood: energetic_electronic
+  voiceover:
+    enabled: false
+
+publish:
+  platforms: [youtube_shorts, instagram_reels]
+  schedule: best_time
+  daily_cap: 2
+  approval: required             # required | auto
+  ai_disclosure: false
+  made_for_kids: false
+  hashtags: ["#Shorts", "#mtb", "#cycling", "#pov"]
+
+budget:
+  max_usd_per_video: 0.50

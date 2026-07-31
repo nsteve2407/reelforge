@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReelForge — the generic short-form content engine</title>
+<meta name="description" content="A config-driven pipeline that turns raw footage or generative briefs into platform-ready YouTube Shorts & Instagram Reels for any niche — bikes, kids' rhymes, TV talk, and beyond." />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo"><span class="spark"></span> Reel<b>Forge</b></div>
+    <div class="links">
+      <a href="#vision">Vision</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#pipeline">Pipeline</a>
+      <a href="#config">Config</a>
+      <a href="#profiles">Profiles</a>
+      <a href="#audience">Audience</a>
+      <a href="#tools">Tool stack</a>
+      <a href="#limits">Limits &amp; law</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span> Plan &amp; elevator pitch · v0 · pre-implementation</div>
+    <h1>One pipeline.<br /><span class="g">Any niche. Every short.</span></h1>
+    <p class="sub">ReelForge ingests your raw footage <em>or</em> a pure text brief, researches what's trending, finds or generates the best moments, cuts them into caption-ready 9:16 Shorts &amp; Reels, and pings you for a one-tap approval before anything goes live. Point it at bike POV clips today, kids' nursery rhymes tomorrow, TV-series hot takes next week — same engine, different config.</p>
+    <div class="cta">
+      <a class="btn primary" href="#architecture">See the architecture →</a>
+      <a class="btn ghost" href="#roadmap">Build roadmap</a>
+    </div>
+    <div class="pills">
+      <span class="pill"><b>Ingest</b> Insta360 · Drive · S3 · local</span>
+      <span class="pill"><b>Research</b> YT · IG · TikTok trends</span>
+      <span class="pill"><b>Create</b> footage or generative</span>
+      <span class="pill"><b>Human-in-the-loop</b> approve → publish</span>
+    </div>
+  </div>
+</header>
+
+<!-- VISION -->
+<section id="vision">
+  <div class="wrap">
+    <div class="kicker">The idea</div>
+    <h2>A content factory you configure, not rebuild</h2>
+    <p class="lede">Every creator workflow is the same seven moves in a different costume. Instead of building a bike-video tool, then a kids'-rhyme tool, then a TV-recap tool, ReelForge treats <b>niche as data</b>. You write a <code>ContentProfile</code>; the engine swaps sources, research signals, editing looks, voices, and publishing targets accordingly.</p>
+    <div class="grid g3" style="margin-top:26px">
+      <div class="card">
+        <span class="ico">🎯</span>
+        <h3>Generic by design</h3>
+        <p>Topic, channel, audience, captions, and color grade are all inputs. The same code path drives cycling edits and pastel lullabies.</p>
+      </div>
+      <div class="card">
+        <span class="ico">🔀</span>
+        <h3>Two creation modes</h3>
+        <p><b>Footage</b> mode mines your real clips for highlights. <b>Generative</b> mode builds video from scratch (script → voice → music → animation). Or blend both.</p>
+      </div>
+      <div class="card">
+        <span class="ico">📈</span>
+        <h3>Views &amp; taste</h3>
+        <p>Trend research plus a performance feedback loop chase reach — but a quality gate and your approval keep the output fun and on-brand, not spammy.</p>
+      </div>
+      <div class="card">
+        <span class="ico">🧩</span>
+        <h3>Pluggable everything</h3>
+        <p>Each stage is an adapter behind a stable interface. Swap OpusClip for a local FFmpeg cutter, or Veo for Kling, without touching the orchestration.</p>
+      </div>
+      <div class="card">
+        <span class="ico">🙋</span>
+        <h3>You stay in control</h3>
+        <p>Nothing publishes silently. A draft + preview link lands in Telegram/Slack/email; you approve, tweak, or reject before it's scheduled.</p>
+      </div>
+      <div class="card">
+        <span class="ico">⚖️</span>
+        <h3>Compliant by default</h3>
+        <p>COPPA "made-for-kids" flags, AI-content disclosure, clean-licensed music, and per-platform rate limits are first-class config, not afterthoughts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="kicker">How it fits together</div>
+    <h2>System architecture</h2>
+    <p class="lede">A Python "product" core (the bespoke AI logic) wrapped by a durable orchestrator for scheduling, retries, and observability. A single <code>ContentProfile</code> flows through every stage and selects the adapters used at each step.</p>
+    <div class="diagram" style="margin-top:24px">
+      <pre class="mermaid">
+flowchart TB
+  subgraph CFG["🎛️ ContentProfile (YAML/DB) — the single source of truth"]
+    P["niche · audience · source mode · captions · color grade · voice · music · platforms · schedule"]
+  end
+  subgraph ING["1 · Ingest"]
+    A1["Connectors: Insta360 Cloud / Google Drive / Dropbox / S3 / local (rclone)"]
+    A2["Media registry + dedupe + metadata"]
+  end
+  subgraph RES["2 · Research & Ideation"]
+    R1["Trend signals: YouTube · Google Trends · TikTok Creative Center · IG"]
+    R2["Claude: synthesize → rank angles → hook & title ideas"]
+  end
+  subgraph UND["3 · Understand clips"]
+    U1["Scene detect (PySceneDetect) · Transcribe (Whisper)"]
+    U2["Vision LLM: score interest / safety / b-roll tags"]
+  end
+  subgraph BLD["4 · Build video"]
+    B1["FOOTAGE: pick highlights → cut → auto-reframe 9:16"]
+    B2["GENERATIVE: script → TTS → music → image/video gen"]
+    B3["Assemble: captions · LUT color grade · music · brand kit"]
+  end
+  subgraph REV["5 · Review gate"]
+    V1["Render draft + thumbnail + copy"]
+    V2["Notify you → approve / edit / reject"]
+  end
+  subgraph PUB["6 · Publish"]
+    Q1["YouTube Data API · Instagram Graph API"]
+    Q2["Schedule at best time · rate-limit aware"]
+  end
+  subgraph FB["7 · Learn"]
+    F1["Pull analytics → attribute to hook/format → tune next profile run"]
+  end
+  CFG --> ING --> RES --> UND --> BLD --> REV --> PUB --> FB
+  FB -. feedback .-> CFG
+  ORCH["⚙️ Orchestrator: Prefect / Temporal — schedule · retry · state · secrets"]
+  ORCH -. drives .- ING
+  ORCH -. drives .- BLD
+  ORCH -. drives .- PUB
+      </pre>
+    </div>
+    <div class="callout info"><b>Build-vs-buy recommendation:</b> keep the creative/AI logic in <b>Python</b> (where quality lives) and orchestrate with <b>Prefect</b> (Python-native scheduling, retries, observability) or <b>Temporal</b> for durable long-running jobs. Use <b>n8n</b> only as optional glue for the notify/approval hop and no-code connectors — "n8n for ops, Python for product."</p></div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="wrap">
+    <div class="kicker">Stage by stage</div>
+    <h2>The seven stages</h2>
+    <p class="lede">Each stage is an independent, testable component with swappable adapters. Tags below show the leading pick and open-source alternatives.</p>
+    <div class="grid g2" style="margin-top:26px">
+
+      <div class="card stage-card">
+        <span class="step">01</span>
+        <span class="num">INGEST</span>
+        <h3>Pull new media from anywhere</h3>
+        <p>Watch a source, sync new files, register them with metadata, dedupe by hash. Works for real footage <em>and</em> as the trigger for pure-generative runs.</p>
+        <ul>
+          <li>Cloud + local connectors via one abstraction</li>
+          <li>Insta360 exports (reframed .mp4/.insv), Drive, S3</li>
+          <li>Proxy transcodes for fast analysis</li>
+        </ul>
+        <div class="tools"><span class="tag oss">rclone</span><span class="tag oss">FFmpeg</span><span class="tag">Drive/Dropbox API</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">02</span>
+        <span class="num">RESEARCH</span>
+        <h3>What's trending + idea generation</h3>
+        <p>Blend trend signals across platforms, then have Claude rank angles for your niche/audience and draft hooks, titles, and descriptions.</p>
+        <ul>
+          <li>YouTube trending + search velocity, Google Trends</li>
+          <li>TikTok Creative Center (cross-platform early signal)</li>
+          <li>vidIQ (has a Claude MCP connector) for niche outliers</li>
+        </ul>
+        <div class="tools"><span class="tag paid">vidIQ MCP</span><span class="tag oss">Google Trends</span><span class="tag">Claude</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">03</span>
+        <span class="num">UNDERSTAND</span>
+        <h3>Find the interesting parts</h3>
+        <p>Detect shot changes, transcribe speech, then use a vision/LLM pass to score each segment for interest, energy, safety, and b-roll usefulness.</p>
+        <ul>
+          <li>Scene cuts: PySceneDetect (content + adaptive)</li>
+          <li>Transcript + word timings: Whisper</li>
+          <li>Multimodal scoring → ranked highlight list</li>
+        </ul>
+        <div class="tools"><span class="tag oss">PySceneDetect</span><span class="tag oss">Whisper</span><span class="tag">Claude vision</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">04</span>
+        <span class="num">BUILD</span>
+        <h3>Assemble the short</h3>
+        <p>Footage mode cuts &amp; auto-reframes highlights to 9:16 with subject tracking. Generative mode turns a script into voiced, scored, animated scenes. Then captions, color grade, and brand kit are layered on.</p>
+        <ul>
+          <li>Reframe/subject-track → 9:16, hook-first ordering</li>
+          <li>Karaoke captions burned in; LUT color grade</li>
+          <li>Music bed + optional AI voiceover</li>
+        </ul>
+        <div class="tools"><span class="tag oss">FFmpeg/MoviePy</span><span class="tag paid">OpusClip/Vizard</span><span class="tag paid">Veo/Kling</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">05</span>
+        <span class="num">REVIEW</span>
+        <h3>Notify + approve before posting</h3>
+        <p>The default gate. You get a preview link, thumbnail options, and the caption/hashtags. One tap approves; you can request an edit or reject.</p>
+        <ul>
+          <li>Telegram/Slack bot or email with preview</li>
+          <li>Approve · regenerate · edit copy · reject</li>
+          <li>Optional "auto-approve" per trusted profile</li>
+        </ul>
+        <div class="tools"><span class="tag">Telegram bot</span><span class="tag">Slack</span><span class="tag oss">signed preview URL</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">06</span>
+        <span class="num">PUBLISH</span>
+        <h3>Upload &amp; schedule, rate-limit aware</h3>
+        <p>Push to YouTube Shorts and Instagram Reels through official APIs, respecting per-platform quotas and posting at high-engagement times.</p>
+        <ul>
+          <li>YouTube Data API v3 (<code>videos.insert</code>)</li>
+          <li>Instagram Graph API (container → publish)</li>
+          <li>Best-time scheduling + backoff on quota</li>
+        </ul>
+        <div class="tools"><span class="tag">YouTube API</span><span class="tag">IG Graph API</span><span class="tag paid">Upload-Post (multi)</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">07</span>
+        <span class="num">LEARN</span>
+        <h3>Feed performance back</h3>
+        <p>Pull views/retention per post, attribute wins to hooks, formats, lengths, and colors, and let the next profile run bias toward what works.</p>
+        <ul>
+          <li>Analytics pull per platform</li>
+          <li>Hook / format / length leaderboard</li>
+          <li>Auto-tune profile defaults &amp; A/B thumbnails</li>
+        </ul>
+        <div class="tools"><span class="tag">YT Analytics API</span><span class="tag">IG Insights</span><span class="tag oss">DuckDB/SQLite</span></div>
+      </div>
+
+      <div class="card stage-card">
+        <span class="step">08</span>
+        <span class="num">CROSS-CUT</span>
+        <h3>State, secrets, cost, safety</h3>
+        <p>A content ledger tracks every asset and job; a policy layer enforces disclosure, kids-safety, and licensing; a cost meter caps generative spend.</p>
+        <ul>
+          <li>Job/asset state in SQLite→Postgres</li>
+          <li>Policy checks: COPPA, AI disclosure, music license</li>
+          <li>Per-run budget guardrails on paid APIs</li>
+        </ul>
+        <div class="tools"><span class="tag oss">Postgres</span><span class="tag oss">object storage</span><span class="tag">policy engine</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CONFIG -->
+<section id="config">
+  <div class="wrap">
+    <div class="kicker">The generic contract</div>
+    <h2>One profile drives it all</h2>
+    <p class="lede">This is the object the whole system reads. To launch a new channel or niche, you write one of these — no code changes. Everything you asked to control (topic, channel, audience, captions, color grade) is a field.</p>
+    <pre style="margin-top:22px"><code><span class="tok-c"># profiles/bike_pov.yaml — a footage-mode profile</span>
+<span class="tok-k">id:</span> bike_pov
+<span class="tok-k">niche:</span> <span class="tok-s">"mountain &amp; city cycling POV"</span>
+<span class="tok-k">channel:</span> { youtube: <span class="tok-s">"@YourBikeCh"</span>, instagram: <span class="tok-s">"yourbike.ig"</span> }
+
+<span class="tok-k">audience:</span>
+  <span class="tok-k">segment:</span> enthusiast_hobbyist    <span class="tok-c"># see Audience taxonomy</span>
+  <span class="tok-k">age:</span> <span class="tok-s">"18-34"</span>
+  <span class="tok-k">tone:</span> high_energy
+
+<span class="tok-k">source:</span>
+  <span class="tok-k">mode:</span> footage               <span class="tok-c"># footage | generative | hybrid</span>
+  <span class="tok-k">connectors:</span> [insta360_cloud, gdrive, local]
+
+<span class="tok-k">research:</span>
+  <span class="tok-k">enabled:</span> <span class="tok-n">true</span>
+  <span class="tok-k">signals:</span> [youtube_trending, google_trends, tiktok_cc, instagram]
+
+<span class="tok-k">edit:</span>
+  <span class="tok-k">aspect_ratio:</span> <span class="tok-s">"9:16"</span>
+  <span class="tok-k">length_s:</span> [15, 45]
+  <span class="tok-k">hook_first:</span> <span class="tok-n">true</span>
+  <span class="tok-k">captions:</span> { enabled: <span class="tok-n">true</span>, style: karaoke_bold, lang: en }
+  <span class="tok-k">color_grade:</span> { lut: teal_orange_punch, look: vivid_action }
+  <span class="tok-k">music:</span> { source: stable_audio, mood: energetic_electronic }
+  <span class="tok-k">voiceover:</span> { enabled: <span class="tok-n">false</span> }
+
+<span class="tok-k">publish:</span>
+  <span class="tok-k">platforms:</span> [youtube_shorts, instagram_reels]
+  <span class="tok-k">schedule:</span> best_time
+  <span class="tok-k">approval:</span> required        <span class="tok-c"># required | auto</span>
+  <span class="tok-k">ai_disclosure:</span> <span class="tok-n">false</span>
+  <span class="tok-k">made_for_kids:</span> <span class="tok-n">false</span></code></pre>
+    <p class="muted small">A generative kids profile flips <code>source.mode: generative</code>, points <code>color_grade.lut</code> at <code>pastel_soft</code>, sets <code>made_for_kids: true</code>, and swaps the build adapters — nothing else changes.</p>
+  </div>
+</section>
+
+<!-- PROFILES -->
+<section id="profiles">
+  <div class="wrap">
+    <div class="kicker">Same engine, three costumes</div>
+    <h2>Worked examples</h2>
+    <p class="lede">Proof the abstraction holds: three wildly different channels expressed purely as configuration.</p>
+    <div class="tabs" style="margin-top:22px">
+      <button class="tab-btn active" data-tab="t-bike">🚵 Bike POV (footage)</button>
+      <button class="tab-btn" data-tab="t-baby">🍼 Nursery rhymes (generative)</button>
+      <button class="tab-btn" data-tab="t-tv">📺 TV-series talk (hybrid)</button>
+    </div>
+
+    <div id="t-bike" class="tab-panel active">
+      <div class="grid g2">
+        <div class="card">
+          <h3>Source → Story</h3>
+          <p>Insta360 rides land in the cloud. ReelForge scene-detects each ride, scores segments for speed/near-misses/scenery, and picks 2–4 highlights per short. Research suggests hooks like "POV: the sketchiest line in [trail]".</p>
+        </div>
+        <div class="card">
+          <h3>Look &amp; feel</h3>
+          <p>Auto-reframe keeps the trail centered; <b>teal-orange punch</b> LUT; bold karaoke captions; licensed energetic bed from Stable Audio. No voiceover — the ride speaks.</p>
+        </div>
+        <div class="card">
+          <h3>Audience</h3>
+          <p>Enthusiast hobbyists, 18–34, high-energy tone. Cross-posts to Shorts + Reels. Approval required while you build trust in the cuts.</p>
+        </div>
+        <div class="card">
+          <h3>Why it wins</h3>
+          <p>Real, authentic POV + trend-aligned hooks + tight hook-first edits. Cheapest mode to run: mostly open-source, minimal paid generative spend.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="t-baby" class="tab-panel">
+      <div class="grid g2">
+        <div class="card">
+          <h3>Brief → Song → Scenes</h3>
+          <p>No footage needed. Claude writes an original rhyme + scene list; music model produces the song; a kids-styled generator (Atlabs/Steve AI-class, or Kling/Veo for custom) animates consistent characters per scene.</p>
+        </div>
+        <div class="card">
+          <h3>Look &amp; feel</h3>
+          <p><b>Pastel-soft</b> palette, 3D-cartoon or cozy-plush style, gentle pacing, sing-along captions synced to lyrics, warm friendly narration voice.</p>
+        </div>
+        <div class="card">
+          <h3>Audience &amp; safety</h3>
+          <p>Kids 0–5 + parents. <code>made_for_kids: true</code> (COPPA), AI-content disclosure on, human review <b>mandatory</b> — character warmth &amp; safety still need your eyes.</p>
+        </div>
+        <div class="card">
+          <h3>Why it wins</h3>
+          <p>Serialized characters + steady output = subscriptions. Fully generative means infinite catalog, but higher API cost and stricter review.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="t-tv" class="tab-panel">
+      <div class="grid g2">
+        <div class="card">
+          <h3>News → Take → Cutaways</h3>
+          <p>Research pulls what's spiking about a show/episode. Claude drafts a spicy-but-fair take; TTS or your own voice narrates; b-roll is licensed stills/clips or AI-generated cutaways (no copyrighted frames).</p>
+        </div>
+        <div class="card">
+          <h3>Look &amp; feel</h3>
+          <p><b>Clean-bright</b> or moody LUT to match the show's vibe; punchy captions; text-on-screen callouts; recognizable recurring intro sting.</p>
+        </div>
+        <div class="card">
+          <h3>Audience</h3>
+          <p>Fandom / superfans, 18–40. Timing matters — publish within hours of episode drop. Hybrid: a little real (your voice) + generative b-roll.</p>
+        </div>
+        <div class="card">
+          <h3>Why it wins</h3>
+          <p>Rides the episode-drop spike; opinion + community bait drives comments. Watch fair-use: commentary yes, re-uploading clips no.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AUDIENCE -->
+<section id="audience">
+  <div class="wrap">
+    <div class="kicker">You asked what the groups are</div>
+    <h2>Target-audience taxonomy</h2>
+    <p class="lede">Pick one from each axis to define a profile's <code>audience</code>. The choice steers research angles, tone, pacing, length, caption style, and compliance flags.</p>
+
+    <div class="aud-axis">Axis A · Intent (why they watch)</div>
+    <div class="chips">
+      <span class="chip"><b>Entertain</b> <span>· thrill, humor, satisfying</span></span>
+      <span class="chip"><b>Educate</b> <span>· how-to, explainer</span></span>
+      <span class="chip"><b>Inspire</b> <span>· aspiration, transformation</span></span>
+      <span class="chip"><b>Inform</b> <span>· news, recaps, updates</span></span>
+      <span class="chip"><b>Comfort</b> <span>· nostalgia, calm, kids</span></span>
+      <span class="chip"><b>Community</b> <span>· fandom, debate, identity</span></span>
+    </div>
+
+    <div class="aud-axis">Axis B · Life-stage / demographic segment</div>
+    <div class="chips">
+      <span class="chip"><b>Toddlers 0–5</b> <span>· COPPA, parent-gated</span></span>
+      <span class="chip"><b>Kids 6–12</b> <span>· edutainment</span></span>
+      <span class="chip"><b>Gen Z 13–24</b> <span>· fast, meme-literate</span></span>
+      <span class="chip"><b>Millennials 25–40</b> <span>· nostalgia + utility</span></span>
+      <span class="chip"><b>Gen X / Boomer 40+</b> <span>· clarity, slower cuts</span></span>
+      <span class="chip"><b>Parents</b> <span>· proxy buyers for kids</span></span>
+    </div>
+
+    <div class="aud-axis">Axis C · Relationship to the topic</div>
+    <div class="chips">
+      <span class="chip"><b>Curious newcomer</b> <span>· broad hooks</span></span>
+      <span class="chip"><b>Hobbyist enthusiast</b> <span>· depth + authenticity</span></span>
+      <span class="chip"><b>Prosumer / pro</b> <span>· gear, technique</span></span>
+      <span class="chip"><b>Superfan / fandom</b> <span>· lore, hot takes</span></span>
+      <span class="chip"><b>Local / regional</b> <span>· place-based</span></span>
+    </div>
+
+    <hr class="soft" />
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Use case</th><th>Intent</th><th>Segment</th><th>Relationship</th><th>Implied knobs</th></tr></thead>
+        <tbody>
+          <tr><td>Bike POV</td><td>Entertain + Inspire</td><td>Gen Z / Millennial</td><td>Hobbyist enthusiast</td><td>High energy, 15–45s, punchy LUT, no VO</td></tr>
+          <tr><td>Nursery rhymes</td><td>Comfort + Educate</td><td>Toddlers 0–5 + Parents</td><td>Curious newcomer</td><td>Slow pacing, pastel, kids-safe, VO on, made-for-kids</td></tr>
+          <tr><td>TV-series talk</td><td>Community + Inform</td><td>Gen Z / Millennial</td><td>Superfan</td><td>Timely, opinionated, captions heavy, hybrid b-roll</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- TOOLS -->
+<section id="tools">
+  <div class="wrap">
+    <div class="kicker">Researched · mid-2026 currency</div>
+    <h2>Tool stack &amp; the generative layer</h2>
+    <p class="lede">Recommendations reflect the 2026 landscape. Strategy: open-source core for control and cost, paid APIs where quality/speed justify it. Every slot is swappable via adapters.</p>
+
+    <h3 style="margin:26px 0 12px">Per-stage picks</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Stage</th><th>Recommended</th><th>Open-source / cheap alt</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Ingest</td><td><span class="rec">rclone + FFmpeg</span></td><td>rclone (OSS)</td><td>One tool syncs Drive, Dropbox, S3, local, and more.</td></tr>
+          <tr><td>Trend research</td><td>vidIQ <span class="badge-s b-paid">paid</span> (Claude MCP)</td><td>Google Trends + YT Data API + TikTok Creative Center</td><td>vidIQ has a one-click Claude connector for live YT data.</td></tr>
+          <tr><td>Ideation / scripting</td><td><span class="rec">Claude</span></td><td>local LLM (Llama-class)</td><td>Angle ranking, hooks, titles, descriptions, safety review.</td></tr>
+          <tr><td>Scene detection</td><td><span class="rec">PySceneDetect</span> <span class="badge-s b-oss">OSS</span></td><td>—</td><td>Content + adaptive detectors handle fast camera motion.</td></tr>
+          <tr><td>Transcription</td><td><span class="rec">Whisper</span> <span class="badge-s b-oss">OSS</span></td><td>faster-whisper</td><td>Word-level timings feed karaoke captions.</td></tr>
+          <tr><td>Highlight scoring</td><td>Claude vision</td><td>BLIP + heuristics (OSS)</td><td>Score interest/energy/safety; tag b-roll.</td></tr>
+          <tr><td>Auto-reframe + clip</td><td>OpusClip / Vizard <span class="badge-s b-paid">paid</span></td><td><span class="rec">FFmpeg + tracking (OSS)</span></td><td>Buy for speed; self-host for cost &amp; control.</td></tr>
+          <tr><td>Captions</td><td>Reap / CapCut <span class="badge-s b-paid">paid</span></td><td><span class="rec">Whisper → ASS/FFmpeg (OSS)</span></td><td>Karaoke styles boost retention on Shorts/Reels.</td></tr>
+          <tr><td>Color grade</td><td>FFmpeg <code>lut3d</code> <span class="badge-s b-oss">OSS</span></td><td>DaVinci Resolve (headless)</td><td>Ship a <code>.cube</code> LUT library keyed by <code>look</code>.</td></tr>
+          <tr><td>Assembly/render</td><td><span class="rec">FFmpeg / MoviePy</span> <span class="badge-s b-oss">OSS</span></td><td>—</td><td>Deterministic, scriptable, free.</td></tr>
+          <tr><td>Publish</td><td><span class="rec">YouTube + IG Graph APIs</span></td><td>Upload-Post / Blotato (multi-platform)</td><td>Official APIs; aggregators simplify many channels.</td></tr>
+          <tr><td>Orchestrate</td><td><span class="rec">Prefect</span> / Temporal</td><td>APScheduler + cron</td><td>n8n optional for notify/approval glue only.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="margin:34px 0 12px">Generative media layer (2026)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Task</th><th>Leaders</th><th>Notes for this pipeline</th></tr></thead>
+        <tbody>
+          <tr><td>Text→video / animation</td><td><span class="badge-s b-pick">Veo 3.1</span> · Kling 3.0 · Runway Gen-4.5 · Luma Ray3 · Pika · LTX-2</td><td>Veo &amp; Kling generate <b>native audio</b>. Kling = value/4K. Runway = shot control. Pika = cheap iteration. <b>Sora is being discontinued in 2026</b> — don't build on it.</td></tr>
+          <tr><td>Kids animation (turnkey)</td><td>Atlabs · Steve AI · MagicLight · Mootion</td><td>Fast character-consistent kids styles; good for nursery-rhyme mode. Still needs human safety review.</td></tr>
+          <tr><td>Voiceover / TTS</td><td>Inworld · Murf · Cartesia · ElevenLabs</td><td>Low-latency, cheaper than ElevenLabs in 2026. OSS: <b>Kokoro</b> (CPU, no clone), <b>Chatterbox</b> (MIT, cloning).</td></tr>
+          <tr><td>Music</td><td>Suno · Udio · <span class="badge-s b-pick">Stable Audio</span></td><td>Suno/Udio best quality but <b>RIAA licensing uncertainty</b> → prefer <b>Stable Audio</b> for clean commercial rights.</td></tr>
+          <tr><td>Images / thumbnails</td><td>Flux · Midjourney · SDXL (OSS)</td><td>Thumbnail variants for A/B testing; b-roll stills.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout"><b>Claude's role across the pipeline:</b> trend synthesis &amp; angle ranking, script/hook/title/description writing, multimodal highlight &amp; safety scoring of clips, generating the shot/scene list for generative mode, and acting as the reasoning layer that assembles a <code>ContentProfile</code> run — with tool-use to call the media/upload APIs.</div>
+  </div>
+</section>
+
+<!-- LIMITS -->
+<section id="limits">
+  <div class="wrap">
+    <div class="kicker">Reality checks</div>
+    <h2>Platform limits &amp; compliance</h2>
+    <p class="lede">These constraints shape throughput and must be designed in, not discovered in production.</p>
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <h3>▶️ YouTube (Data API v3)</h3>
+        <ul style="color:var(--muted);font-size:0.92rem;margin:8px 0 0;padding-left:18px">
+          <li>10,000 quota units/day; each upload = <b>1,600</b> → ~<b>6 uploads/day</b> per project.</li>
+          <li>Separate ~100 <code>search.list</code> calls/day bucket.</li>
+          <li>Per-channel ~10 uploads/24h regardless of quota.</li>
+          <li>No Shorts flag — vertical ≤60s is auto-classified; add <code>#Shorts</code>.</li>
+          <li>OAuth <code>youtube.upload</code> + verified project; audit ≈ 2–4 weeks for public posting.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>📸 Instagram (Graph API)</h3>
+        <ul style="color:var(--muted);font-size:0.92rem;margin:8px 0 0;padding-left:18px">
+          <li><b>Business</b> account required (Creator not supported for publishing).</li>
+          <li>~25–100 API posts/24h (sources vary) — aim 1–3 quality Reels/day.</li>
+          <li>Reels 9:16, ~5–90s to land in the Reels tab.</li>
+          <li>3-step flow: create container → poll status → publish.</li>
+          <li>Scopes: <code>instagram_business_content_publish</code> (old scopes deprecated Jan 2025).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:20px"><b>Compliance built into the profile:</b> <code>made_for_kids</code> (COPPA — disables personalized ads/comments for kids content), <code>ai_disclosure</code> (platforms require flagging synthetic/altered media), clean music licensing (Stable Audio over Suno/Udio for commercial safety), and honest commentary/fair-use for TV takes (no re-uploading copyrighted clips). Mass-automation also risks platform "authenticity/spam" enforcement — the human review gate and modest daily caps are the mitigation.</div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="wrap">
+    <div class="kicker">How we build it</div>
+    <h2>Phased roadmap</h2>
+    <p class="lede">Ship a thin end-to-end slice first (bikes, footage mode, manual upload), then widen. Each phase is independently useful.</p>
+    <div class="timeline">
+      <div class="tl-item now">
+        <span class="ph">PHASE 0 · Foundations</span>
+        <h4>Profile schema, connectors, state store</h4>
+        <p><code>ContentProfile</code> model + validation, rclone ingest, media registry (SQLite), secrets, and a Prefect skeleton. Nothing publishes yet.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">PHASE 1 · Footage MVP (bikes)</span>
+        <h4>Ingest → scene detect → Whisper → highlight → cut → reframe → caption → LUT → draft → notify</h4>
+        <p>End-to-end for real footage, ending in a Telegram approval + <b>manual</b> upload. Proves the core loop cheaply with mostly OSS.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">PHASE 2 · Auto-publish + research</span>
+        <h4>YouTube &amp; IG APIs, scheduling, trend module</h4>
+        <p>Wire official upload APIs with quota-aware scheduling; add trend research + Claude ideation feeding hooks/titles. Approval gate stays.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">PHASE 3 · Generative mode (kids)</span>
+        <h4>Script → TTS → music → animation → assemble</h4>
+        <p>Add the generative source strategy and kids profile with COPPA + disclosure + mandatory review. Same publish path.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">PHASE 4 · Hybrid mode (TV talk) + learning</span>
+        <h4>Mixed real/generative + analytics feedback loop</h4>
+        <p>Timely episode-drop workflow; pull analytics, attribute wins, auto-tune profile defaults, A/B thumbnails and hooks.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">PHASE 5 · Scale</span>
+        <h4>Multi-channel, multi-account, cost &amp; safety hardening</h4>
+        <p>Postgres, multiple channels per niche, budget guardrails, richer policy engine, dashboards.</p>
+      </div>
+    </div>
+
+    <hr class="soft" />
+    <h3 style="margin:0 0 12px">Rough running cost</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Mode</th><th>Main cost drivers</th><th>Hobby (~/mo)</th><th>Scale (~/mo)</th></tr></thead>
+        <tbody>
+          <tr><td>Footage (bikes)</td><td>Compute for Whisper/FFmpeg; small LLM usage; APIs free-tier</td><td>$0–30</td><td>$50–150</td></tr>
+          <tr><td>Generative (kids)</td><td>Video-gen credits (Veo/Kling), TTS, music, LLM</td><td>$40–150</td><td>$300–1,000+</td></tr>
+          <tr><td>Hybrid (TV talk)</td><td>Some gen b-roll + TTS + LLM + research tools</td><td>$20–80</td><td>$150–400</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small">Estimates are order-of-magnitude; generative video credits dominate and swing widely with volume and resolution.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="logo" style="justify-content:center;margin-bottom:6px"><span class="spark"></span> Reel<b>Forge</b></div>
+    <div>Plan &amp; elevator pitch — pre-implementation. Built to be argued with, then built.</div>
+    <div class="small">Tooling landscape researched mid-2026 · figures are directional and should be re-verified before commit.</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: "dark",
+    themeVariables: {
+      background: "#151824", primaryColor: "#1b1f2e", primaryTextColor: "#e7e9f0",
+      primaryBorderColor: "#7c5cff", lineColor: "#6b7288", fontFamily: "ui-monospace, monospace",
+      fontSize: "13px"
+    },
+    flowchart: { curve: "basis", nodeSpacing: 28, rankSpacing: 40 }
+  });
+  // profile tabs
+  document.querySelectorAll(".tab-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".tab-btn").forEach(function (x) { x.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      document.getElementById(b.dataset.tab).classList.add("active");
+    });
+  });
+</script>
+</body>
+</html>
