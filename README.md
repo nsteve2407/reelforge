@@ -96,10 +96,28 @@ uv pip install --python .venv/bin/python -e .
 .venv/bin/python -m reelforge.cli publish --run <run_id> --profile bike_pov  # after approval
 #   add --live (+ creds via env) to hit the real YouTube/Instagram/fal/MiniMax APIs
 
-.venv/bin/python -m pytest                          # 49 tests
+.venv/bin/python -m pytest                          # 54 tests
 ```
 
 A run ingests → detects scenes / audio-energy / motion (+ action-cam telemetry if present) → **fuses signals classically** (normalize → weight → `scipy` peaks → soft-NMS) → cuts the top highlights → reframes to 9:16 → color-grades → (optional captions) → renders a draft → writes a **review card** and stops at the approval gate. Nothing publishes without approval. Captions need the optional `faster-whisper` extra; absent, they're skipped gracefully.
+
+## Going live (credentials)
+
+Everything above runs **offline in dry-run/fallback with zero keys.** Each external component is optional — set its env vars to make that piece live, then add `--live`. Run **`reelforge setup`** for this checklist with live set/missing status ([full table on the site](https://nsteve2407.github.io/reelforge/deep-dive.html#setup)).
+
+| Component | Env vars | Where to get it | Without it |
+|-----------|----------|-----------------|------------|
+| Claude (scripts/hooks) | `ANTHROPIC_API_KEY` | console.anthropic.com | template fallback |
+| fal.ai (gen media) | `FAL_KEY` | fal.ai → Keys | dry-run placeholders |
+| MiniMax (alt gen) | `MINIMAX_API_KEY`, `MINIMAX_GROUP_ID` | platform.minimax.io | uses fal / dry-run |
+| YouTube research | `YOUTUBE_API_KEY` | Google Cloud console | that source empty |
+| YouTube upload (OAuth) | `REELFORGE_YT_TOKEN_FILE` (or client id/secret/token) | GCP OAuth (scope `youtube.upload`, audit ~2–4 wks) | publish dry-run |
+| Instagram (Business) | `REELFORGE_IG_USER_ID`, `REELFORGE_IG_ACCESS_TOKEN`, `REELFORGE_IG_MEDIA_URL` | Meta app + IG business account | publish dry-run |
+
+```bash
+export ANTHROPIC_API_KEY=... FAL_KEY=... REELFORGE_YT_TOKEN_FILE=~/yt.json
+reelforge run --profile bike_pov --input ride.mp4 --auto-approve --publish --live
+```
 
 ## Repo layout
 
@@ -108,12 +126,12 @@ index.html  styles.css  deep-dive.html   # GitHub Pages pitch + deep dive
 profiles/                 # ContentProfile configs (bike_pov, nursery_rhymes, tv_series_talk)
 pyproject.toml
 src/reelforge/
-  core/     # profile · storage · state (ledger + quota) · media · publish · generate · op · types
+  core/     # profile · storage · state (ledger+quota) · media · publish · generate · credentials · op · types
   ops/      # atomic ops: ingest · understand · build · review · publish · research · generate
   adapters/ # credential-gated, lazy: youtube · instagram (publish) · fal · minimax (generate)
   flows/    # footage.py (run_footage) · generative.py (run_generative) · publish_run
-  cli.py    # typer CLI: doctor / profiles / ops / run (routes by source.mode) / publish
-tests/      # 49 tests: pure-unit + real-ffmpeg integration + e2e footage & generative + publish/research
+  cli.py    # typer CLI: doctor / setup / profiles / ops / run (routes by source.mode) / publish
+tests/      # 54 tests: pure-unit + real-ffmpeg integration + e2e footage & generative + publish/research/credentials
 ```
 
 > Orchestration note: ops are pure functions composed by `flows/footage.py`; each maps 1:1 onto a Prefect `@task` when moving to a durable orchestrator — that's the only change. Storage is a local backend behind an fsspec-shaped interface (S3/GCS drop in later).

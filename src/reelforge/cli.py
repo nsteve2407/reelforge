@@ -84,12 +84,19 @@ def run(
 
     prof = load_profile(profile, profiles_dir=profiles_dir)
 
+    creds = None
+    if live:
+        from .core.credentials import load_credentials
+        creds = load_credentials()
+        if not creds:
+            typer.echo("--live set but no credentials found; run `reelforge setup`.")
+
     if prof.source.mode.value == "generative":
         typer.echo(f"running generative profile '{prof.id}'"
                    + (f" on topic '{topic}'" if topic else ""))
         result = run_generative(prof, topic=topic, work_root=work,
                                 auto_approve=auto_approve, publish=publish,
-                                dry_run=not live)
+                                dry_run=not live, creds=creds)
     else:
         src = input
         if demo or not src:
@@ -103,7 +110,7 @@ def run(
             typer.echo(f"input not found: {src}"); raise typer.Exit(code=1)
         typer.echo(f"running profile '{prof.id}' on {src}")
         result = run_footage(src, prof, work_root=work, auto_approve=auto_approve,
-                             publish=publish, dry_run=not live)
+                             publish=publish, dry_run=not live, creds=creds)
     typer.echo("")
     for k, v in result.items():
         typer.echo(f"  {k:14} {v}")
@@ -125,9 +132,28 @@ def publish(
     from .flows import publish_run
 
     prof = load_profile(profile, profiles_dir=profiles_dir)
-    result = publish_run(run, prof, work_root=work, dry_run=not live)
+    creds = None
+    if live:
+        from .core.credentials import load_credentials
+        creds = load_credentials()
+    result = publish_run(run, prof, work_root=work, dry_run=not live, creds=creds)
     for k, v in result.items():
         typer.echo(f"  {k:14} {v}")
+
+
+@app.command()
+def setup() -> None:
+    """Show per-component go-live TODOs and which credentials are set."""
+    from .core.credentials import env_status
+    typer.echo("ReelForge go-live checklist (all optional; unset = dry-run/fallback):\n")
+    for r in env_status():
+        mark = "OK " if r["ready"] else "TODO"
+        typer.echo(f"[{mark}] {r['component']}")
+        typer.echo(f"       account: {r['account']}")
+        typer.echo(f"       get key: {r['where']}")
+        typer.echo(f"       env:     {', '.join(r['set']) or '(none set)'}"
+                   + (f"  missing: {', '.join(r['missing_required'])}" if r["missing_required"] else ""))
+        typer.echo(f"       unlocks: {r['gate']}\n")
 
 
 if __name__ == "__main__":

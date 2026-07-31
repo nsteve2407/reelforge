@@ -87,7 +87,8 @@ def op_gen_scene_clip(ctx: OpContext, index: int, prompt: str,
                       provider: str | None = None, dry_run: bool = True,
                       creds: dict | None = None) -> OpResult:
     """Generate one animated scene clip. One job: a scene."""
-    gen = get_generator(provider, dry_run=dry_run, creds=creds)
+    gen = get_generator(provider, dry_run=dry_run,
+                        creds=creds.get(provider) if isinstance(creds, dict) and provider in creds else creds)
     out = ctx.storage.path("generate", f"scene{index}.mp4")
     res = gen.video(str(out), prompt, w=int(target_w_h[0]), h=int(target_w_h[1]),
                     seconds=seconds, index=index)
@@ -100,7 +101,8 @@ def op_gen_voiceover(ctx: OpContext, text: str, seconds: float,
                      provider: str | None = None, dry_run: bool = True,
                      creds: dict | None = None) -> OpResult:
     """Generate narration audio. One job: voiceover."""
-    gen = get_generator(provider, dry_run=dry_run, creds=creds)
+    gen = get_generator(provider, dry_run=dry_run,
+                        creds=creds.get(provider) if isinstance(creds, dict) and provider in creds else creds)
     out = ctx.storage.path("generate", "voice.m4a")
     res = gen.voice(str(out), text, seconds=seconds)
     return OpResult(outputs={"audio": res.path, "provider": res.provider},
@@ -112,7 +114,8 @@ def op_gen_music(ctx: OpContext, mood: str, seconds: float,
                  provider: str | None = None, dry_run: bool = True,
                  creds: dict | None = None) -> OpResult:
     """Generate a music bed. One job: music."""
-    gen = get_generator(provider, dry_run=dry_run, creds=creds)
+    gen = get_generator(provider, dry_run=dry_run,
+                        creds=creds.get(provider) if isinstance(creds, dict) and provider in creds else creds)
     out = ctx.storage.path("generate", "music.m4a")
     res = gen.music(str(out), mood=mood, seconds=seconds)
     return OpResult(outputs={"audio": res.path, "provider": res.provider},

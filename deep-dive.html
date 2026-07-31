@@ -23,6 +23,7 @@
       <a href="#learning">Learning</a>
       <a href="#stack">Tech stack</a>
       <a href="#run">Run it</a>
+      <a href="#setup" style="color:#b9a8ff;font-weight:700">Setup TODOs</a>
     </div>
   </div>
 </nav>
@@ -414,6 +415,68 @@ Dockerfile  docker-compose.yml  requirements.txt</code></pre>
     <div style="text-align:center;margin-top:30px">
       <a class="btn primary" href="index.html">← Back to the overview</a>
     </div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section id="setup">
+  <div class="wrap">
+    <div class="kicker">Follow-up · what YOU need to wire up to go live</div>
+    <h2>Go-live setup &amp; per-component TODOs</h2>
+    <p class="lede">Everything runs <b>offline in dry-run/fallback</b> with zero keys. Each row below is optional — add its env vars to make that component live. The tool ships this same checklist: <code>reelforge setup</code> prints each component and whether its credentials are set. Order = suggested setup order.</p>
+
+    <div class="tbl-wrap" style="margin-top:22px">
+      <table>
+        <thead><tr><th>Component</th><th>Account / prerequisite</th><th>Where to generate</th><th>Env vars</th><th>Without it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Claude</b><br/><span class="muted small">ideation · scripts · hooks</span></td>
+            <td>Anthropic account</td>
+            <td>console.anthropic.com → API Keys</td>
+            <td><code>ANTHROPIC_API_KEY</code></td>
+            <td>deterministic template fallback</td>
+          </tr>
+          <tr>
+            <td><b>fal.ai</b><br/><span class="muted small">video/image/voice/music aggregator</span></td>
+            <td>fal.ai account (pay-per-use)</td>
+            <td>fal.ai → Dashboard → Keys</td>
+            <td><code>FAL_KEY</code> <span class="muted small">(+ optional <code>REELFORGE_FAL_VIDEO_MODEL</code>, <code>_TTS_MODEL</code>, <code>_MUSIC_MODEL</code>)</span></td>
+            <td>dry-run placeholder media</td>
+          </tr>
+          <tr>
+            <td><b>MiniMax</b><br/><span class="muted small">alt gen: Hailuo video · TTS · music</span></td>
+            <td>MiniMax platform account</td>
+            <td>platform.minimax.io → API Keys</td>
+            <td><code>MINIMAX_API_KEY</code>, <code>MINIMAX_GROUP_ID</code></td>
+            <td>uses fal / dry-run instead</td>
+          </tr>
+          <tr>
+            <td><b>YouTube Data API</b><br/><span class="muted small">trend research</span></td>
+            <td>Google Cloud project, YouTube Data API v3 enabled</td>
+            <td>console.cloud.google.com → Credentials → API key</td>
+            <td><code>YOUTUBE_API_KEY</code></td>
+            <td>that trend source returns nothing (others still work)</td>
+          </tr>
+          <tr>
+            <td><b>YouTube upload</b> <span class="badge-s b-paid">OAuth</span><br/><span class="muted small">publish Shorts</span></td>
+            <td>Verified GCP project + OAuth client (scope <code>youtube.upload</code>); <b>compliance audit ~2–4 wks</b> for public posting</td>
+            <td>GCP → OAuth consent + client → run OAuth flow → save token JSON</td>
+            <td><code>REELFORGE_YT_TOKEN_FILE</code> <span class="muted small">(or <code>REELFORGE_YT_CLIENT_ID</code>/<code>_SECRET</code>/<code>_TOKEN</code>/<code>_REFRESH_TOKEN</code>)</span></td>
+            <td>publish stays dry-run</td>
+          </tr>
+          <tr>
+            <td><b>Instagram Reels</b> <span class="badge-s b-paid">Business</span><br/><span class="muted small">publish Reels</span></td>
+            <td>IG <b>Business</b> account + Meta app w/ <code>instagram_business_content_publish</code>; draft hosted at a <b>public URL</b></td>
+            <td>developers.facebook.com → App → long-lived token; link IG business account</td>
+            <td><code>REELFORGE_IG_USER_ID</code>, <code>REELFORGE_IG_ACCESS_TOKEN</code>, <code>REELFORGE_IG_MEDIA_URL</code></td>
+            <td>publish stays dry-run</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout good" style="margin-top:20px"><b>How it's consumed:</b> set the env vars (e.g. in a <code>.env</code>), then run with <code>--live</code>: <code>reelforge run --profile bike_pov --input ride.mp4 --auto-approve --publish --live</code>. The loader assembles a nested creds map; each op picks only the sub-keys for its platform/provider. No env vars set → the exact same command runs end-to-end in dry-run, so you can build and test the whole pipeline before creating a single account.</div>
+    <div class="callout"><b>Other setup notes:</b> optional captions transcription needs the <code>faster-whisper</code> extra (<code>pip install reelforge[captions]</code>); Google-Trends research uses <code>pytrends</code> (no key); local TTS (Kokoro) and OSS music (Stable Audio 3 small/medium) are self-host, no key. Music for commercial use → prefer Stable Audio over Suno/Udio (licensing).</div>
   </div>
 </section>
 

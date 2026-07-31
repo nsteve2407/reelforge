@@ -49,7 +49,8 @@ def op_publish(ctx: OpContext, draft: str, platform: str, *,
                         message=f"{platform}: quota exhausted, skipped")
 
     meta = build_publish_meta(ctx.profile, platform)
-    publisher = get_publisher(platform, dry_run=dry_run, creds=creds)
+    pcreds = creds.get(platform) if isinstance(creds, dict) and platform in creds else creds
+    publisher = get_publisher(platform, dry_run=dry_run, creds=pcreds)
     result = publisher.publish(str(draft), meta)
 
     if result.ok:
