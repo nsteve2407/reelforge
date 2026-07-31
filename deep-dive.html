@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ReelForge — Deep dive: LLM-usage, atomic tasks, stack</title>
+<meta name="description" content="Where Claude is actually needed vs OSS/classical; atomic single-responsibility task DAG; multi-signal clip detection; generative providers; the learning loop; and the local-first tech stack." />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="logo"><a href="index.html" style="color:inherit;text-decoration:none"><span class="spark"></span> Reel<b>Forge</b></a></div>
+    <div class="links">
+      <a href="index.html">← Overview</a>
+      <a href="#llm-map">LLM map</a>
+      <a href="#atomic">Atomic tasks</a>
+      <a href="#clips">Clip detection</a>
+      <a href="#providers">Gen providers</a>
+      <a href="#learning">Learning</a>
+      <a href="#stack">Tech stack</a>
+      <a href="#run">Run it</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" style="padding:72px 0 56px">
+  <div class="wrap">
+    <div class="badge"><span class="dot"></span> Deep dive · component research (2026-sourced)</div>
+    <h1 style="font-size:clamp(2rem,5vw,3.2rem)">Use AI <span class="g">where it earns its place.</span></h1>
+    <p class="sub">The core question answered: of ~40 atomic tasks in ReelForge, only <b>5</b> genuinely need an LLM. Everything else is deterministic OSS or classical signal processing — cheaper, faster, testable, and reproducible. Here's the map, the task graph, the providers, the learning loop, and how it runs locally first.</p>
+  </div>
+</header>
+
+<!-- LLM MAP -->
+<section id="llm-map">
+  <div class="wrap">
+    <div class="kicker">Question 1 · where does Claude / an external LLM get used?</div>
+    <h2>The LLM-usage map</h2>
+    <p class="lede">Principle: reserve LLMs for <b>language, reasoning, and multimodal judgment</b>. Anything with a deterministic definition (does this frame have motion? where's the loudness peak? what are the word timings?) is OSS/classical. Claude has <b>zero</b> native media generation — it never produces video, images, audio, or voice; it writes the words and the prompts, judges, and orchestrates.</p>
+
+    <div class="grid g2" style="margin-top:24px">
+      <div class="card" style="border-color:#4a3a6b">
+        <span class="ico">🧠</span>
+        <h3>LLM earns its place — only 5 spots</h3>
+        <ul style="color:var(--muted);font-size:0.93rem;margin:8px 0 0;padding-left:18px">
+          <li><b>Ideation</b> — synthesize trends + audience + brand voice into hooks, titles, descriptions <span class="muted small">(Stage 2, optional)</span></li>
+          <li><b>Scripting</b> — nursery-rhyme lyrics, TV-take script, scene/shot list <span class="muted small">(generative mode)</span></li>
+          <li><b>Prompt-writing</b> — turn a scene into a strong Veo/Kling/Flux prompt</li>
+          <li><b>Multimodal judgment</b> — brand-fit / safety scoring of frames <span class="muted small">(policy nuance)</span></li>
+          <li><b>Synthesis of feedback</b> — theme up comment sentiment &amp; propose new hook variants from winners <span class="muted small">(Stage 7)</span></li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:#2a5c4a">
+        <span class="ico">⚙️</span>
+        <h3>Deterministic / OSS — everything else</h3>
+        <ul style="color:var(--muted);font-size:0.93rem;margin:8px 0 0;padding-left:18px">
+          <li>Ingest, dedupe, probe, transcode — rclone / ffprobe / hashlib</li>
+          <li>Scene cuts, transcription, word timings — PySceneDetect / WhisperX</li>
+          <li>Interest signals — librosa, OpenCV, telemetry, YOLO/MediaPipe</li>
+          <li>Highlight fusion — scipy peak-finding + soft-NMS (no model)</li>
+          <li>Cut, reframe, captions, color grade, mux — MoviePy / FFmpeg</li>
+          <li>Upload, analytics, bandit choice, scorer, attribution — APIs / MABWiser / XGBoost / SHAP</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 style="margin:30px 0 12px">Per-task decision table</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Stage</th><th>Atomic task</th><th>How it's done</th><th>LLM?</th></tr></thead>
+        <tbody>
+          <tr><td>Ingest</td><td>sync / probe / dedupe / proxy</td><td>rclone · ffprobe · hashlib · ffmpeg</td><td class="rec">No</td></tr>
+          <tr><td>Research</td><td>fetch trends (YT / Trends / TikTok)</td><td>official APIs · pytrends</td><td class="rec">No</td></tr>
+          <tr><td>Research</td><td>rank topics by fit/velocity</td><td>deterministic scoring</td><td class="rec">No</td></tr>
+          <tr><td>Research</td><td><b>draft hooks / titles / angles</b></td><td>Claude (trend+audience+voice synthesis)</td><td style="color:var(--brand-2);font-weight:700">Yes*</td></tr>
+          <tr><td>Understand</td><td>scene detection</td><td>PySceneDetect ContentDetector</td><td class="rec">No</td></tr>
+          <tr><td>Understand</td><td>transcribe + word timings</td><td>WhisperX (faster-whisper + wav2vec2)</td><td class="rec">No</td></tr>
+          <tr><td>Understand</td><td>audio energy / events / motion / telemetry</td><td>librosa · PANNs · OpenCV · telemetry-parser</td><td class="rec">No</td></tr>
+          <tr><td>Understand</td><td>fuse signals → ranked highlights</td><td>scipy find_peaks + soft-NMS + weights</td><td class="rec">No</td></tr>
+          <tr><td>Understand</td><td><b>brand-fit / safety scoring</b></td><td>Claude vision (policy judgment)</td><td style="color:var(--brand-2);font-weight:700">Yes*</td></tr>
+          <tr><td>Build</td><td>cut / reframe / captions / LUT / mux</td><td>MoviePy · MediaPipe track · WhisperX→ASS · ffmpeg lut3d</td><td class="rec">No</td></tr>
+          <tr><td>Build</td><td><b>script + scene list</b> (generative)</td><td>Claude</td><td style="color:var(--brand-2);font-weight:700">Yes*</td></tr>
+          <tr><td>Build</td><td><b>media-model prompts</b> (generative)</td><td>Claude → fal.ai / Veo / Kling / Flux / TTS / music</td><td style="color:var(--brand-2);font-weight:700">Yes*</td></tr>
+          <tr><td>Review</td><td>render preview / notify / await approval</td><td>FastAPI · Telegram/Slack · Prefect state</td><td class="rec">No</td></tr>
+          <tr><td>Publish</td><td>upload / schedule / quota-guard</td><td>YouTube Data API v3 · IG Graph API</td><td class="rec">No</td></tr>
+          <tr><td>Learn</td><td>fetch analytics / log events</td><td>YouTube Analytics · IG Insights</td><td class="rec">No</td></tr>
+          <tr><td>Learn</td><td>choose next hook variant</td><td>MABWiser Thompson sampling (bandit)</td><td class="rec">No</td></tr>
+          <tr><td>Learn</td><td>pre-publish "will it land?" score</td><td>XGBoost + SHAP on content features</td><td class="rec">No</td></tr>
+          <tr><td>Learn</td><td>comment sentiment (classify)</td><td>VADER / DistilBERT</td><td class="rec">No</td></tr>
+          <tr><td>Learn</td><td><b>theme feedback + new angles</b></td><td>Claude (open-ended synthesis)</td><td style="color:var(--brand-2);font-weight:700">Yes*</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small">* Every LLM task is <b>optional / gated</b> by a ContentProfile flag. A pure footage channel (bikes) can run end-to-end with the safety score as the <em>only</em> LLM call — or none, if you self-host an NSFW classifier and skip brand-fit nuance.</p>
+    <div class="callout good"><b>Net effect:</b> ~8 of 11 task families are 100% OSS/classical. Estimated LLM spend ≈ <b>$0.01–0.10 per footage video</b> (safety + optional hooks) and higher only for fully-generative kids/TV runs where scripting + prompts + gen-media dominate.</div>
+  </div>
+</section>
+
+<!-- ATOMIC -->
+<section id="atomic">
+  <div class="wrap">
+    <div class="kicker">Question (interjection) · one task = one thing</div>
+    <h2>Atomic, single-responsibility task DAG</h2>
+    <p class="lede">Every stage decomposes into small ops that each do exactly one thing — individually testable, swappable, and cacheable. In Prefect these are <code>@task</code>s composed into <code>@flow</code>s; the ContentProfile decides which ops run and with which adapter. Swap <code>op_transcribe_whisperx</code> for <code>op_transcribe_api</code> without touching anything downstream.</p>
+    <div class="diagram" style="margin-top:22px">
+      <pre class="mermaid">
+flowchart LR
+  subgraph S1["1 · Ingest"]
+    direction TB
+    a1["op_watch_source"] --> a2["op_sync_media (rclone)"] --> a3["op_probe (ffprobe)"] --> a4["op_dedupe (hash)"] --> a5["op_transcode_proxy"]
+  end
+  subgraph S2["2 · Research"]
+    direction TB
+    b1["op_fetch_yt_trending"] --> b4["op_rank_topics"]
+    b2["op_fetch_google_trends"] --> b4
+    b3["op_fetch_tiktok_cc"] --> b4
+    b4 --> b5{{"op_draft_hooks · LLM*"}}
+  end
+  subgraph S3["3 · Understand"]
+    direction TB
+    c1["op_detect_scenes"] --> c9["op_fuse_highlights"]
+    c2["op_transcribe"] --> c9
+    c3["op_audio_energy"] --> c9
+    c4["op_audio_events"] --> c9
+    c5["op_motion_flow"] --> c9
+    c6["op_extract_telemetry"] --> c9
+    c7["op_detect_objects_pose"] --> c9
+    c9 --> c10{{"op_safety_score · LLM*"}}
+  end
+  subgraph S4["4 · Build"]
+    direction TB
+    d1["op_select_clips"] --> d2["op_cut"] --> d3["op_reframe_9x16"] --> d4["op_gen_captions"] --> d5["op_color_grade_lut"] --> d6["op_mix_music"] --> d7["op_render"]
+    g1{{"op_script · LLM*"}} -.generative.-> g2{{"op_media_prompts · LLM*"}} -.-> g3["op_gen_video/img/tts/music"] -.-> d7
+  end
+  subgraph S5["5 · Review"]
+    direction TB
+    e1["op_render_preview"] --> e2["op_notify"] --> e3["op_await_approval"]
+  end
+  subgraph S6["6 · Publish"]
+    direction TB
+    f1["op_quota_guard"] --> f2["op_upload_youtube"]
+    f1 --> f3["op_upload_instagram"] --> f4["op_schedule"]
+    f2 --> f4
+  end
+  subgraph S7["7 · Learn"]
+    direction TB
+    h1["op_fetch_analytics"] --> h2["op_log_event"] --> h3["op_update_bandit"] --> h4["op_train_scorer"]
+    h2 --> h5["op_sentiment (VADER)"] --> h6{{"op_theme_feedback · LLM*"}}
+  end
+  S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
+  S7 -. tunes next run .-> S2
+      </pre>
+    </div>
+    <p class="muted small">Diamonds (LLM*) are the only nodes that call Claude, and each is profile-gated. The <code>op_gen_*</code> generative branch only fires when <code>source.mode: generative|hybrid</code>.</p>
+  </div>
+</section>
+
+<!-- CLIPS -->
+<section id="clips">
+  <div class="wrap">
+    <div class="kicker">Question 5 · multiple sources to find interesting clips</div>
+    <h2>Multi-signal highlight detection</h2>
+    <p class="lede">No single signal is reliable, and none needs an LLM. ReelForge computes several independent, cheap signals over the timeline, normalizes each, and fuses them into one ranked highlight list. This is classic signal processing — reproducible and tunable per niche.</p>
+
+    <h3 style="margin:26px 0 12px">The signal catalog (each = one op)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Signal</th><th>OSS tool / method</th><th>Catches</th><th>GTX 1060</th></tr></thead>
+        <tbody>
+          <tr><td>Shot / scene change</td><td>PySceneDetect (Content + Adaptive)</td><td>cuts, new scenery, pace</td><td>CPU ✓</td></tr>
+          <tr><td>Audio energy / loudness peaks</td><td>librosa · ffmpeg ebur128</td><td>impacts, drops, shouts, hype</td><td>CPU ✓</td></tr>
+          <tr><td>Audio events</td><td>PANNs / YAMNet</td><td>laughter, applause, crashes</td><td>~1 GB ✓</td></tr>
+          <tr><td>Motion intensity / optical flow</td><td>OpenCV (Farnebäck) · ffmpeg scdet</td><td>speed, jumps, camera shake</td><td>CPU ✓</td></tr>
+          <tr><td>Speech salience</td><td>WhisperX + KeyBERT / TF-IDF</td><td>punchlines, key phrases</td><td>~1–1.5 GB ✓</td></tr>
+          <tr><td>Object / person / pose</td><td>YOLOv8-n · MediaPipe Pose</td><td>subjects, actions, framing</td><td>1–2 GB ✓ (keyframes)</td></tr>
+          <tr><td>Visual saliency</td><td>saliency net (optional)</td><td>where the eye goes</td><td>2–3 GB ✓</td></tr>
+          <tr><td class="rec">📟 Action-cam telemetry</td><td>telemetry-parser · exiftool</td><td><b>g-force spikes, speed, GPS, altitude, jumps</b></td><td>CPU ✓ (one pass)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info"><b>Insta360 telemetry is the killer signal for bike POV.</b> Insta360 <code>.insv/.mp4</code> embed gyroscope, accelerometer, GPS, altitude, speed and bearing. It's extractable <em>without</em> video decoding via <b>telemetry-parser</b> (the Rust lib behind Gyroflow, has Python bindings) or <b>exiftool</b>. A simple threshold on accelerometer/g-force magnitude flags jumps, hard braking, and near-misses in one cheap pass — no ML, no LLM. This is exactly the kind of classical approach that beats "ask a vision model what's interesting."</div>
+
+    <h3 style="margin:26px 0 12px">Fusion — classical, no model</h3>
+    <div class="grid g4">
+      <div class="card"><span class="num">STEP 1</span><h3 style="font-size:1rem">Normalize</h3><p>Each signal → 0–1 over the timeline (z-score or min-max per clip).</p></div>
+      <div class="card"><span class="num">STEP 2</span><h3 style="font-size:1rem">Weight &amp; sum</h3><p>Weighted linear combination; weights come from the ContentProfile (bikes lean on telemetry+motion).</p></div>
+      <div class="card"><span class="num">STEP 3</span><h3 style="font-size:1rem">Peak-find</h3><p><code>scipy.signal.find_peaks</code> on the fused score → candidate moments.</p></div>
+      <div class="card"><span class="num">STEP 4</span><h3 style="font-size:1rem">Soft-NMS</h3><p>Temporal non-max suppression dedupes overlapping peaks → final ranked segments.</p></div>
+    </div>
+    <p class="muted small" style="margin-top:14px">When is a vision LLM worth adding <em>on top</em>? Only for <b>semantic</b> questions the signals can't answer — "is this the funny part of the story?", multi-clip narrative coherence, or brand/safety judgment. It ranks the shortlist; it doesn't scan the whole video.</p>
+  </div>
+</section>
+
+<!-- PROVIDERS -->
+<section id="providers">
+  <div class="wrap">
+    <div class="kicker">Question 2 · generative snippet providers &amp; can Claude do it</div>
+    <h2>Generative media: providers + Claude's real role</h2>
+    <p class="lede">Short answer: <b>Claude cannot generate video, images, audio, or voice</b> — confirmed by Anthropic docs (text + vision-input + tool-use only). Claude is the <b>writer &amp; orchestrator</b>: it drafts scripts, writes the prompts, judges the results, and calls the generators via tool-use/MCP. The pixels/audio come from specialist models, best reached through an <b>aggregator</b> so each stays one swappable <code>model_id</code>.</p>
+
+    <h3 style="margin:26px 0 12px">Text/image → video (all cloud; API-accessible)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Model</th><th>API</th><th>~Price</th><th>Native audio</th><th>Note</th></tr></thead>
+        <tbody>
+          <tr><td>Google Veo 3.1 (Lite/Pro)</td><td>Gemini API</td><td>$0.03–0.40/s</td><td>✓</td><td>Cheapest tier great for b-roll; migrate off Veo 3.0.</td></tr>
+          <tr><td>Kling 3.0</td><td>Official</td><td>$0.07–0.34/s</td><td>✓</td><td>Value + 4K; pricing swings weekly.</td></tr>
+          <tr><td>Runway Gen-4.5</td><td>Official</td><td>~$0.25/s</td><td>✓</td><td>Best shot control; Gen-3 sunsets Jul 2026.</td></tr>
+          <tr><td>Luma Ray-2/3</td><td>Official</td><td>~$0.08/s</td><td>✓</td><td>Natural motion, cinematic camera.</td></tr>
+          <tr><td>LTX-2</td><td>Official</td><td>~$0.04/s</td><td>✓</td><td>Cheapest commercial; long shots.</td></tr>
+          <tr><td>Pika / Hailuo</td><td>via fal.ai</td><td>$0.05–0.10/s</td><td>✓</td><td>Fast iteration / cheap tests.</td></tr>
+          <tr><td style="color:var(--bad)">Sora 2</td><td>dead</td><td>—</td><td>✗</td><td><b>API shuts down Sep 24 2026 — do not build on it.</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid g2" style="margin-top:22px">
+      <div class="card">
+        <h3>🔊 Voice (TTS)</h3>
+        <p><b>Cloud:</b> Cartesia (40ms, cheap), OpenAI TTS ($0.015/1k chars), ElevenLabs (best voices, pricier).<br/><b>Self-host on the 1060:</b> <span class="rec">Kokoro-82M</span> (Apache-2.0, 2–3 GB, real-time) or Piper (CPU). Kokoro is the recommended local default.</p>
+      </div>
+      <div class="card">
+        <h3>🎵 Music</h3>
+        <p><b>Recommended:</b> <span class="rec">Stable Audio 2.5</span> — official API, ~$0.20/track, <b>royalty-free/commercial-safe</b>. Avoid Suno/Udio for commercial (no clean API + RIAA licensing uncertainty). OSS commercial-safe: ACE-Step / YuE (need ~16 GB — cloud).</p>
+      </div>
+      <div class="card">
+        <h3>🖼️ Images (thumbnails, b-roll, kids art)</h3>
+        <p><b>Flux</b> via fal.ai/Replicate (~$0.03–0.06/img) or <b>SDXL</b>. SDXL/Flux want ≥8 GB VRAM — run in cloud or accept slow CPU on the 1060. Great for A/B thumbnail variants.</p>
+      </div>
+      <div class="card" style="border-color:#4a3a6b">
+        <h3>🧭 Aggregator-first</h3>
+        <p><span class="rec">fal.ai</span> (cheapest video, no cold-start) or <b>Replicate</b> (widest catalog) expose Veo/Kling/Runway/Flux/etc. behind one API. One <code>op_generate_media(model_id, prompt)</code> task; start cheap, upgrade hero shots by changing a string.</p>
+      </div>
+    </div>
+
+    <div class="callout"><b>GTX 1060 reality:</b> good for <em>scripting</em> (Claude, remote) and <em>local TTS</em> (Kokoro/Piper). Production video &amp; music generation need cloud (32 GB+ VRAM); the 1060 can only prototype tiny quantized clips slowly. So the generative layer is <b>cloud APIs via fal.ai</b>, while the footage pipeline runs fully local.</div>
+  </div>
+</section>
+
+<!-- LEARNING -->
+<section id="learning">
+  <div class="wrap">
+    <div class="kicker">Question 3 · how the learning loop improves the next generation</div>
+    <h2>The learning loop</h2>
+    <p class="lede">Views improve because the system <b>logs what it shipped, measures what happened, and biases the next run</b> — using classical ML, not "ask an LLM if it'll go viral." Two complementary mechanisms: a <b>bandit</b> that keeps picking better hooks over time, and a <b>pre-publish scorer</b> that ranks candidate variants before they're posted.</p>
+
+    <div class="diagram" style="margin-top:22px">
+      <pre class="mermaid">
+flowchart LR
+  P["Publish variant<br/>(hook, length, LUT, music, topic)"] --> M["Fetch metrics 48h<br/>YT Analytics · IG Insights"]
+  M --> L["Log event row<br/>features + retention_curve + engagement"]
+  L --> B["Update bandit<br/>MABWiser Thompson"]
+  L --> X["Retrain scorer<br/>XGBoost + SHAP"]
+  B --> N["Next run: pick hook arm"]
+  X --> R["Pre-publish: rank candidate<br/>clips/hooks, show to review gate"]
+  N --> P2["Next ContentProfile run"]
+  R --> P2
+  L --> S["Sentiment (VADER/DistilBERT)"] --> T["Claude: theme comments<br/>+ propose new hook angles"]
+  T --> P2
+      </pre>
+    </div>
+
+    <div class="grid g3" style="margin-top:8px">
+      <div class="card">
+        <h3>1 · What to log</h3>
+        <p>Per post: <code>hook_type, caption_style, length_s, music_mood, lut, topic</code> + outcomes <code>views, avg_view_duration, retention_curve[], swipe_away, likes/comments/shares</code>. The <b>first-3-second retention</b> is the single most predictive signal.</p>
+      </div>
+      <div class="card">
+        <h3>2 · Bandit (online)</h3>
+        <p><b>MABWiser Thompson sampling</b> over hook archetypes (text-overlay, hard-cut, music-drop, pattern-break, surprise). Reward = early retention / watch-time. ~70/30 exploit/explore. It converges toward the hooks your audience actually rewards.</p>
+      </div>
+      <div class="card">
+        <h3>3 · Scorer (offline)</h3>
+        <p><b>XGBoost</b> trained on logged features predicts engagement; <b>SHAP</b> explains <em>why</em> a variant ranks high, surfaced at the review gate. Trains in &lt;1 min on the 1060. Ranks candidates <em>before</em> posting so you publish the best of N.</p>
+      </div>
+    </div>
+    <div class="callout good"><b>LLM vs classical split here:</b> bandit selection, scoring, retention analysis, and sentiment <em>classification</em> are all classical/OSS. Claude is used only for <b>open-ended synthesis</b> — turning "these 200 comments + these winning features" into new hook ideas and a weekly theme summary. That closes the loop with fresh creative, fed by hard numbers.</div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack">
+  <div class="wrap">
+    <div class="kicker">Question 4 · tech stack &amp; how it runs</div>
+    <h2>Tech stack</h2>
+    <p class="lede">Python core, <b>Prefect 3</b> for orchestration (plain Python functions become tasks/flows — trivial to test locally, one env var to run in cloud). Storage, state, and secrets are abstracted so the <em>same code</em> runs on your laptop and in the cloud.</p>
+    <div class="grid g3" style="margin-top:22px">
+      <div class="card"><h3>Orchestration</h3><p><b>Prefect 3</b> — native Python, runtime branching (matches dynamic clip selection), retries/scheduling/observability, no per-task fees. Dagster is the alternative if asset-lineage matters.</p></div>
+      <div class="card"><h3>Media &amp; ML</h3><p>FFmpeg + MoviePy 2, PySceneDetect, faster-whisper/WhisperX, OpenCV, librosa, MediaPipe, YOLOv8, telemetry-parser.</p></div>
+      <div class="card"><h3>Storage abstraction</h3><p><b>fsspec</b> — local FS ↔ S3/GCS behind one interface. Zero code change from laptop to cloud bucket.</p></div>
+      <div class="card"><h3>Config &amp; secrets</h3><p><b>pydantic-settings</b> — the ContentProfile + env vars; <code>SecretStr</code> for keys, never logged.</p></div>
+      <div class="card"><h3>State DB</h3><p><b>SQLite → Postgres</b> via one connection string (SQLAlchemy). Content ledger + job state + metrics.</p></div>
+      <div class="card"><h3>Review gate</h3><p><b>FastAPI</b> webhook + Telegram/Slack bot; Prefect waits on the approval signal (24h timeout → auto-reject).</p></div>
+      <div class="card"><h3>Publish</h3><p><code>google-api-python-client</code> (YouTube Data + Analytics), Meta Graph API for IG. Quota-guarded.</p></div>
+      <div class="card"><h3>Learn</h3><p>MABWiser, XGBoost, SHAP, VADER/DistilBERT, pandas/scipy; optional Feast feature store + MLflow.</p></div>
+      <div class="card"><h3>AI</h3><p><b>anthropic</b> SDK for Claude (ideation/scripting/prompts/judgment); <b>fal.ai</b> for generative media; Kokoro local TTS.</p></div>
+    </div>
+
+    <div class="callout info" style="margin-top:20px"><b>GTX 1060 6GB verdict:</b> viable baseline for the <b>footage</b> pipeline. faster-whisper <code>small</code>/<code>medium</code> + INT8 runs in ~1–1.5 GB; scene detect + audio + optical flow on CPU; MediaPipe/YOLO on keyframes. Estimated ~1 video / 3 min in batch, ~50–100/day. The real bottlenecks are API quotas and your approval time, not the GPU. Generative video/music offloads to cloud regardless.</div>
+  </div>
+</section>
+
+<!-- RUN -->
+<section id="run">
+  <div class="wrap">
+    <div class="kicker">Local first → cloud → docker</div>
+    <h2>How it's run</h2>
+    <p class="lede">Start on your Linux box, no cloud account required. Because storage/state/config are abstracted, promoting to cloud is an env change, and containerizing is a Dockerfile — not a rewrite.</p>
+    <div class="timeline">
+      <div class="tl-item now">
+        <span class="ph">TIER 1 · LOCAL (start here)</span>
+        <h4>One machine, zero cloud</h4>
+        <p>Prefect OSS server on <code>localhost</code>, media on local FS (fsspec local), state in SQLite, secrets in <code>.env</code>, GPU used directly. Run a flow with <code>python -m reelforge run --profile bike_pov</code>.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">TIER 2 · DOCKER</span>
+        <h4>Reproducible container + GPU</h4>
+        <p>Base image <code>nvidia/cuda:12.3-runtime</code> + ffmpeg; <code>docker compose</code> with worker + Postgres + FastAPI (+ optional Redis). <code>--gpus all</code> via nvidia-container-toolkit. Same code, pinned deps.</p>
+      </div>
+      <div class="tl-item">
+        <span class="ph">TIER 3 · CLOUD</span>
+        <h4>Portable, no rewrite</h4>
+        <p>Flip env: <code>STORAGE=s3://…</code>, <code>DATABASE_URL=postgres://…</code>, point Prefect worker at a cloud work-pool. Long/GPU jobs on a cloud GPU VM; short tasks fit Cloud-Run-style serverless containers (mind the timeout on GPU jobs).</p>
+      </div>
+    </div>
+
+    <pre style="margin-top:22px"><code><span class="tok-c"># Layered, portable — the same module runs in all three tiers</span>
+reelforge/
+  profiles/            <span class="tok-c"># ContentProfile YAML (the generic contract)</span>
+  core/
+    config.py          <span class="tok-c"># pydantic-settings: profile + env + secrets</span>
+    storage.py         <span class="tok-c"># fsspec: local | s3 | gcs behind one API</span>
+    state.py           <span class="tok-c"># SQLAlchemy: sqlite -> postgres</span>
+  ops/                 <span class="tok-c"># ONE file per atomic task (single responsibility)</span>
+    ingest/  research/  understand/  build/  review/  publish/  learn/
+  flows/               <span class="tok-c"># Prefect @flow: compose ops per profile</span>
+  adapters/            <span class="tok-c"># swappable: whisperx|api, fal|veo, kokoro|elevenlabs…</span>
+  app/                 <span class="tok-c"># FastAPI review gate + webhooks</span>
+Dockerfile  docker-compose.yml  requirements.txt</code></pre>
+    <div style="text-align:center;margin-top:30px">
+      <a class="btn primary" href="index.html">← Back to the overview</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="logo" style="justify-content:center;margin-bottom:6px"><span class="spark"></span> Reel<b>Forge</b></div>
+    <div>Deep dive — component research synthesized from four parallel scouts (mid-2026 sources).</div>
+    <div class="small">Prices, model names, and API availability shift fast — re-verify before implementation. Sora is being discontinued; don't build on it.</div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true, theme: "dark",
+    themeVariables: {
+      background: "#151824", primaryColor: "#1b1f2e", primaryTextColor: "#e7e9f0",
+      primaryBorderColor: "#7c5cff", lineColor: "#6b7288",
+      fontFamily: "ui-monospace, monospace", fontSize: "12px"
+    },
+    flowchart: { curve: "basis", nodeSpacing: 22, rankSpacing: 46 }
+  });
+</script>
+</body>
+</html>
