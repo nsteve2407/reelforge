@@ -204,3 +204,63 @@ def op_render(ctx: OpContext, clips: list[str], name: str = "draft") -> OpResult
         media.run(cmd)
     return OpResult(outputs={"draft": str(out)}, artifacts={"draft": str(out)},
                     message=f"rendered {len(clips)} clip(s)")
+
+
+@op("mux_audio")
+def op_mux_audio(ctx: OpContext, video: str, tracks: list[dict],
+                 name: str = "muxed") -> OpResult:
+    """Mix narration/music onto a video's timeline. One job: audio mux.
+
+    `tracks` = [{"path": str, "gain": float}]. Replaces the video's own audio.
+    """
+    tracks = [t for t in tracks if t and t.get("path")]
+    if not tracks:
+        return OpResult(ok=False, message="no audio tracks to mux")
+    out = ctx.storage.path("build", f"{name}.mp4")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["ffmpeg", "-y", "-i", str(video)]
+    for t in tracks:
+        cmd += ["-i", str(t["path"])]
+    if len(tracks) == 1:
+        cmd += ["-map", "0:v:0", "-map", "1:a:0"]
+    else:
+        vol = [f"[{i + 1}:a:0]volume={t.get('gain', 1.0)}[a{i}]"
+               for i, t in enumerate(tracks)]
+        mix_in = "".join(f"[a{i}]" for i in range(len(tracks)))
+        fc = ";".join(vol) + ";" + mix_in + \
+            f"amix=inputs={len(tracks)}:duration=longest[a]"
+        cmd += ["-filter_complex", fc, "-map", "0:v:0", "-map", "[a]"]
+    cmd += ["-c:v", "copy", "-c:a", "aac", "-shortest", str(out)]
+    media.run(cmd)
+    return OpResult(outputs={"path": str(out)}, artifacts={"muxed": str(out)},
+                    message=f"muxed {len(tracks)} audio track(s)")
+
+
+@op("captions_from_script")
+def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
+                            style: str = "singalong_lyrics") -> OpResult:
+    """Burn captions from known scene text+timings (no transcriber). One job: captions."""
+    caps: list[Caption] = []
+    t = 0.0
+    for s in scenes:
+        dur = float(s.get("seconds", 2.0))
+        caps.append(Caption(t, t + dur, str(s.get("text", "")).strip()))
+        t += dur
+    info = media.probe(video)
+    ass = build_ass(caps, style, info.width, info.height)
+    ass_path = ctx.storage.write_text(ass, "build", "script_captions.ass")
+    out = ctx.storage.path("build", f"{Path(video).stem}_cap.mp4")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    esc = str(ass_path).replace(":", "\\:").replace("'", "\\'")
+    try:
+        media.run(["ffmpeg", "-y", "-i", str(video), "-vf", f"subtitles='{esc}'",
+                   "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "copy", str(out)])
+        captioned = True
+        msg = f"burned {len(caps)} caption(s)"
+    except media.FFmpegError:
+        import shutil
+        shutil.copy2(video, out)
+        captioned = False
+        msg = "caption burn unavailable (no libass); passthrough"
+    return OpResult(outputs={"path": str(out), "captioned": captioned},
+                    artifacts={"captioned": str(out)}, message=msg)

@@ -70,32 +70,40 @@ def ops() -> None:
 @app.command()
 def run(
     profile: str = typer.Option(..., help="profile id or path to yaml"),
-    input: Optional[str] = typer.Option(None, help="input video path"),
-    demo: bool = typer.Option(False, help="synthesize a test clip and run"),
+    input: Optional[str] = typer.Option(None, help="input video path (footage mode)"),
+    topic: Optional[str] = typer.Option(None, help="topic/brief (generative mode)"),
+    demo: bool = typer.Option(False, help="synthesize a test clip (footage mode)"),
     profiles_dir: str = typer.Option("profiles", help="profiles directory"),
     work: str = typer.Option(".rf_work", help="working directory"),
     auto_approve: bool = typer.Option(False, help="skip the approval stop"),
     publish: bool = typer.Option(False, help="publish after approval (needs --auto-approve)"),
-    live: bool = typer.Option(False, help="real upload instead of dry-run (needs creds)"),
+    live: bool = typer.Option(False, help="real upload/generation instead of dry-run (needs creds)"),
 ) -> None:
-    """Run the footage pipeline end to end (stops at the review gate)."""
-    from .flows import run_footage  # lazy: avoids importing heavy deps for --help
+    """Run the pipeline end to end (stops at the review gate). Routes by source.mode."""
+    from .flows import run_footage, run_generative  # lazy
 
     prof = load_profile(profile, profiles_dir=profiles_dir)
-    src = input
-    if demo or not src:
-        if not media.have_ffmpeg():
-            typer.echo("ffmpeg required for --demo"); raise typer.Exit(code=1)
-        demo_path = Path(work) / "_demo_input.mp4"
-        typer.echo("synthesizing demo clip...")
-        media.synth_test_clip(demo_path, duration=14.0, fps=30, size="640x360")
-        src = str(demo_path)
-    if not Path(src).exists():
-        typer.echo(f"input not found: {src}"); raise typer.Exit(code=1)
 
-    typer.echo(f"running profile '{prof.id}' on {src}")
-    result = run_footage(src, prof, work_root=work, auto_approve=auto_approve,
-                         publish=publish, dry_run=not live)
+    if prof.source.mode.value == "generative":
+        typer.echo(f"running generative profile '{prof.id}'"
+                   + (f" on topic '{topic}'" if topic else ""))
+        result = run_generative(prof, topic=topic, work_root=work,
+                                auto_approve=auto_approve, publish=publish,
+                                dry_run=not live)
+    else:
+        src = input
+        if demo or not src:
+            if not media.have_ffmpeg():
+                typer.echo("ffmpeg required for --demo"); raise typer.Exit(code=1)
+            demo_path = Path(work) / "_demo_input.mp4"
+            typer.echo("synthesizing demo clip...")
+            media.synth_test_clip(demo_path, duration=14.0, fps=30, size="640x360")
+            src = str(demo_path)
+        if not Path(src).exists():
+            typer.echo(f"input not found: {src}"); raise typer.Exit(code=1)
+        typer.echo(f"running profile '{prof.id}' on {src}")
+        result = run_footage(src, prof, work_root=work, auto_approve=auto_approve,
+                             publish=publish, dry_run=not live)
     typer.echo("")
     for k, v in result.items():
         typer.echo(f"  {k:14} {v}")
