@@ -233,5 +233,56 @@ def learn_train(work: str = typer.Option(".rf_work")) -> None:
     ctx.ledger.close()
 
 
+@app.command()
+def batch(
+    profiles: str = typer.Option(..., help="comma-separated profile ids"),
+    topic: Optional[str] = typer.Option(None, help="topic for generative/hybrid channels"),
+    profiles_dir: str = typer.Option("profiles", help="profiles directory"),
+    work: str = typer.Option(".rf_work", help="working directory"),
+    auto_approve: bool = typer.Option(False),
+    publish: bool = typer.Option(False),
+    live: bool = typer.Option(False),
+    enforce_budget: bool = typer.Option(False, help="trim generative scenes to stay in budget"),
+) -> None:
+    """Run multiple channels/profiles in one pass (multi-channel scale)."""
+    from .flows import run_batch
+    creds = None
+    if live:
+        from .core.credentials import load_credentials
+        creds = load_credentials()
+    items = [{"profile": p.strip(), "topic": topic} for p in profiles.split(",") if p.strip()]
+    results = run_batch(items, profiles_dir=profiles_dir, work_root=work,
+                        auto_approve=auto_approve, publish=publish, dry_run=not live,
+                        creds=creds, enforce_budget=enforce_budget)
+    for r in results:
+        typer.echo(f"  {r.get('profile'):18} {r.get('status'):18} "
+                   + (r.get('error', '') or f"draft={r.get('draft','')}"))
+
+
+@app.command()
+def report(
+    work: str = typer.Option(".rf_work", help="working directory"),
+    html: Optional[str] = typer.Option(None, help="write an HTML dashboard to this path"),
+) -> None:
+    """Print a status/spend/quota/bandit summary; optionally write an HTML dashboard."""
+    from .core.state import Ledger
+    from .core.report import build_report, render_html
+    led = Ledger(Path(work) / "reelforge.db")
+    rep = build_report(led)
+    sp = rep["spend"]
+    typer.echo(f"runs: {rep['runs_total']}  |  status: {rep['status_counts']}")
+    typer.echo(f"spend est all-time: ${sp['all_time']['est_usd']:.2f} "
+               f"(charged ${sp['all_time']['charged_usd']:.2f})  |  today: ${sp['today']['est_usd']:.2f}")
+    typer.echo("quota today: " + ", ".join(
+        f"{p}={q['used']}/{q['limit']}" for p, q in rep["quota_today"].items()))
+    if rep["bandit"]:
+        top = rep["bandit"][0]
+        typer.echo(f"top hook: {top['arm']} (mean {top['mean']:.3f})")
+    if html:
+        Path(html).write_text(render_html(rep), encoding="utf-8")
+        typer.echo(f"dashboard -> {html}")
+    led.close()
+
+
 if __name__ == "__main__":
     app()

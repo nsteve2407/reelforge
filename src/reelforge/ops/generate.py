@@ -12,6 +12,7 @@ from ..core.context import OpContext
 from ..core.generate import get_generator
 from ..core.op import op
 from ..core.types import OpResult
+from ..core.budget import BudgetGuard
 
 # A simple, safe kid-friendly rhyme scaffold used by the offline fallback.
 _RHYME_LINES = [
@@ -92,8 +93,9 @@ def op_gen_scene_clip(ctx: OpContext, index: int, prompt: str,
     out = ctx.storage.path("generate", f"scene{index}.mp4")
     res = gen.video(str(out), prompt, w=int(target_w_h[0]), h=int(target_w_h[1]),
                     seconds=seconds, index=index)
-    return OpResult(outputs={"clip": res.path, "provider": res.provider},
-                    artifacts={"scene": res.path}, message=res.message)
+    est = BudgetGuard(ctx.ledger, ctx.profile).record(ctx.run_id, "video", provider, seconds=seconds, dry_run=dry_run)
+    return OpResult(outputs={"clip": res.path, "provider": res.provider, "est_usd": est},
+                    artifacts={"scene": res.path}, metrics={"est_usd": est}, message=res.message)
 
 
 @op("gen_voiceover")
@@ -105,8 +107,9 @@ def op_gen_voiceover(ctx: OpContext, text: str, seconds: float,
                         creds=creds.get(provider) if isinstance(creds, dict) and provider in creds else creds)
     out = ctx.storage.path("generate", "voice.m4a")
     res = gen.voice(str(out), text, seconds=seconds)
-    return OpResult(outputs={"audio": res.path, "provider": res.provider},
-                    artifacts={"voice": res.path}, message=res.message)
+    est = BudgetGuard(ctx.ledger, ctx.profile).record(ctx.run_id, "voice", provider, chars=len(text or ""), dry_run=dry_run)
+    return OpResult(outputs={"audio": res.path, "provider": res.provider, "est_usd": est},
+                    artifacts={"voice": res.path}, metrics={"est_usd": est}, message=res.message)
 
 
 @op("gen_music")
@@ -118,5 +121,6 @@ def op_gen_music(ctx: OpContext, mood: str, seconds: float,
                         creds=creds.get(provider) if isinstance(creds, dict) and provider in creds else creds)
     out = ctx.storage.path("generate", "music.m4a")
     res = gen.music(str(out), mood=mood, seconds=seconds)
-    return OpResult(outputs={"audio": res.path, "provider": res.provider},
-                    artifacts={"music": res.path}, message=res.message)
+    est = BudgetGuard(ctx.ledger, ctx.profile).record(ctx.run_id, "music", provider, seconds=seconds, dry_run=dry_run)
+    return OpResult(outputs={"audio": res.path, "provider": res.provider, "est_usd": est},
+                    artifacts={"music": res.path}, metrics={"est_usd": est}, message=res.message)

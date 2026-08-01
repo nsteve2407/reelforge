@@ -2,7 +2,7 @@
 
 **A generic, config-driven pipeline that turns raw footage _or_ a text brief into platform-ready YouTube Shorts & Instagram Reels — for any niche.**
 
-> Status: **Phases 0–4 built** — footage MVP (multi-signal highlights → 9:16 draft), **generative** (script→voice→music→scenes→captions) and **hybrid** (your voice + AI b-roll) modes, a review gate, quota-guarded publish to YouTube/Instagram, plus trend research, hook ideation, and a **learning loop** (Thompson-sampling hook bandit + pre-publish scorer). All dry-run/offline by default. **64 tests green.** Phase 5 (multi-channel scale) planned. The site (`index.html` / `deep-dive.html`) is the design/research.
+> Status: **Phases 0–5 built (all roadmap phases complete).** Footage / generative / hybrid modes → review gate → quota-guarded publish (YT/IG); trend research + hook ideation; a learning loop (Thompson bandit + pre-publish scorer); **budget guardrails**, **multi-channel batch**, and a **local dashboard**. All dry-run/offline by default; add `--live` + credentials to go real. **71 tests green.** The site (`index.html` / `deep-dive.html`) is the design/research.
 
 📄 **Live pitch / plan → [GitHub Pages site](https://nsteve2407.github.io/reelforge/)**  ·  🔬 **[Deep dive: LLM-usage map, atomic tasks, providers, learning loop & stack](https://nsteve2407.github.io/reelforge/deep-dive.html)**
 
@@ -75,7 +75,7 @@ publish: { platforms: [youtube_shorts, instagram_reels], approval: required }
 | 2 | Publish (YT/IG) behind approval gate + quota guard + scheduling + trend research | ✅ **built** (dry-run + credential-gated live) |
 | 3 | Generative mode (script→voice→music→scenes→captions) + COPPA/AI-disclosure | ✅ **built** (dry-run media; credential-gated fal/MiniMax) |
 | 4 | Hybrid mode (voice + AI b-roll) + learning loop (bandit + scorer) | ✅ **built** |
-| 5 | Multi-channel scale, budget guardrails, dashboards | planned |
+| 5 | Multi-channel batch + budget guardrails + local dashboard | ✅ **built** |
 
 ## Quickstart (footage MVP)
 
@@ -102,7 +102,12 @@ uv pip install --python .venv/bin/python -e .
 .venv/bin/python -m reelforge.cli learn insights   # ranked hook bandit + scorer status
 .venv/bin/python -m reelforge.cli learn train      # retrain pre-publish scorer
 
-.venv/bin/python -m pytest                          # 64 tests
+# multi-channel + budget + dashboard:
+.venv/bin/python -m reelforge.cli batch --profiles nursery_rhymes,tv_series_talk --topic "night sky" --auto-approve --publish
+.venv/bin/python -m reelforge.cli report --html dashboard.html   # spend/quota/bandit/status
+#   generative runs accept --enforce-budget to trim scenes to profile.budget.max_usd_per_video
+
+.venv/bin/python -m pytest                          # 71 tests
 ```
 
 A run ingests → detects scenes / audio-energy / motion (+ action-cam telemetry if present) → **fuses signals classically** (normalize → weight → `scipy` peaks → soft-NMS) → cuts the top highlights → reframes to 9:16 → color-grades → (optional captions) → renders a draft → writes a **review card** and stops at the approval gate. Nothing publishes without approval. Captions need the optional `faster-whisper` extra; absent, they're skipped gracefully.
@@ -132,12 +137,12 @@ index.html  styles.css  deep-dive.html   # GitHub Pages pitch + deep dive
 profiles/                 # ContentProfile configs (bike_pov, nursery_rhymes, tv_series_talk)
 pyproject.toml
 src/reelforge/
-  core/     # profile · storage · state (ledger+quota+bandit+metrics) · media · publish · generate · learn · credentials · op · types
+  core/     # profile · storage · state · media · publish · generate · learn · budget · report · credentials · op · types
   ops/      # atomic ops: ingest · understand · build · review · publish · research · generate · learn
-  adapters/ # credential-gated, lazy: youtube · instagram · analytics (publish/insights) · fal · minimax (generate)
-  flows/    # footage.py · generative.py · hybrid.py · publish_run
-  cli.py    # typer CLI: doctor / setup / profiles / ops / run (routes by mode) / publish / learn {ingest,insights,train}
-tests/      # 64 tests: pure-unit + real-ffmpeg integration + e2e footage/generative/hybrid + publish/research/credentials/learn
+  adapters/ # credential-gated, lazy: youtube · instagram · analytics · fal · minimax
+  flows/    # footage.py · generative.py · hybrid.py · batch.py (multi-channel) · publish_run
+  cli.py    # typer CLI: doctor / setup / profiles / ops / run / publish / learn{…} / batch / report
+tests/      # 71 tests: pure-unit + real-ffmpeg integration + e2e all modes + publish/research/creds/learn/budget/batch
 ```
 
 > Orchestration note: ops are pure functions composed by `flows/footage.py`; each maps 1:1 onto a Prefect `@task` when moving to a durable orchestrator — that's the only change. Storage is a local backend behind an fsspec-shaped interface (S3/GCS drop in later).

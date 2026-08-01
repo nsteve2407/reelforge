@@ -63,6 +63,16 @@ CREATE TABLE IF NOT EXISTS post_metrics (
     metrics  TEXT NOT NULL DEFAULT '{}',
     ts       REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS spend (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id   TEXT,
+    day      TEXT NOT NULL,
+    kind     TEXT NOT NULL,
+    provider TEXT,
+    est_usd  REAL NOT NULL DEFAULT 0,
+    dry_run  INTEGER NOT NULL DEFAULT 1,
+    ts       REAL NOT NULL
+);
 """
 
 
@@ -211,6 +221,49 @@ class Ledger:
             d["metrics"] = json.loads(d["metrics"])
             out.append(d)
         return out
+
+    # ---- spend ----
+    def add_spend(self, run_id: str | None, day: str, kind: str, provider: str | None,
+                  est_usd: float, dry_run: bool) -> None:
+        self.conn.execute(
+            "INSERT INTO spend(run_id,day,kind,provider,est_usd,dry_run,ts) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (run_id, day, kind, provider, float(est_usd), 1 if dry_run else 0, _now()),
+        )
+        self.conn.commit()
+
+    def run_spend(self, run_id: str) -> dict:
+        row = self.conn.execute(
+            "SELECT COALESCE(SUM(est_usd),0) est, "
+            "COALESCE(SUM(CASE WHEN dry_run=0 THEN est_usd ELSE 0 END),0) charged "
+            "FROM spend WHERE run_id=?", (run_id,)
+        ).fetchone()
+        return {"est_usd": float(row["est"]), "charged_usd": float(row["charged"])}
+
+    def day_spend(self, day: str) -> dict:
+        row = self.conn.execute(
+            "SELECT COALESCE(SUM(est_usd),0) est, "
+            "COALESCE(SUM(CASE WHEN dry_run=0 THEN est_usd ELSE 0 END),0) charged "
+            "FROM spend WHERE day=?", (day,)
+        ).fetchone()
+        return {"est_usd": float(row["est"]), "charged_usd": float(row["charged"])}
+
+    def list_runs(self) -> list[dict]:
+        rows = self.conn.execute("SELECT * FROM runs ORDER BY created_at").fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["meta"] = json.loads(d["meta"])
+            out.append(d)
+        return out
+
+    def total_spend(self) -> dict:
+        row = self.conn.execute(
+            "SELECT COALESCE(SUM(est_usd),0) est, "
+            "COALESCE(SUM(CASE WHEN dry_run=0 THEN est_usd ELSE 0 END),0) charged "
+            "FROM spend"
+        ).fetchone()
+        return {"est_usd": float(row["est"]), "charged_usd": float(row["charged"])}
 
     def close(self) -> None:
         self.conn.close()

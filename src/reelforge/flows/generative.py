@@ -13,6 +13,7 @@ from ..core.context import OpContext
 from ..core.profile import ContentProfile, SourceMode
 from ..core.state import Ledger
 from ..core.storage import Storage
+from ..core.budget import BudgetGuard, estimate_cost
 from ..ops import generate as G
 from ..ops import build, review
 from ..ops import publish as pub
@@ -28,6 +29,7 @@ def run_generative(
     publish: bool = False,
     dry_run: bool = True,
     creds: Optional[dict] = None,
+    enforce_budget: bool = False,
 ) -> dict:
     if profile.source.mode is SourceMode.footage:
         raise ValueError(f"profile '{profile.id}' is footage-mode; use run_footage")
@@ -53,12 +55,21 @@ def run_generative(
         # ---- generate scene clips (already at target 9:16) ----
         ledger.update_run(run_id, "generating")
         clips = []
+        guard = BudgetGuard(ctx.ledger, profile)
         for i, scene in enumerate(scenes):
+            per = float(scene["seconds"])
+            if enforce_budget and clips and not guard.allow(
+                    run_id, estimate_cost("video", gen_provider, seconds=per)):
+                ledger.log_event(run_id, "budget", "trim",
+                                 f"stopped at scene {i}; per-video budget "
+                                 f"${profile.budget.max_usd_per_video} reached")
+                break
             clip = G.op_gen_scene_clip(
-                ctx, i, scene["text"], target, float(scene["seconds"]),
+                ctx, i, scene["text"], target, per,
                 provider=gen_provider, dry_run=dry_run, creds=creds,
             ).outputs["clip"]
             clips.append(clip)
+        scenes = scenes[:len(clips)]  # keep captions/timeline aligned with what we built
         video = build.op_render(ctx, clips, name="scenes").outputs["draft"]
 
         # ---- voice + music ----
