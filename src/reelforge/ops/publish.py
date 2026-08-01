@@ -50,8 +50,19 @@ def op_publish(ctx: OpContext, draft: str, platform: str, *,
 
     meta = build_publish_meta(ctx.profile, platform)
     pcreds = creds.get(platform) if isinstance(creds, dict) and platform in creds else creds
+    # Instagram needs a public media URL; host the draft if one isn't supplied.
+    if platform == "instagram_reels" and not dry_run and pcreds and not pcreds.get("media_url"):
+        from ..core.hosting import ensure_public_url
+        url = ensure_public_url(draft, pcreds)
+        if url:
+            pcreds = {**pcreds, "media_url": url}
+            ctx.log("publish", "info", f"hosted draft for IG: {url}")
     publisher = get_publisher(platform, dry_run=dry_run, creds=pcreds)
-    result = publisher.publish(str(draft), meta)
+    if dry_run:
+        result = publisher.publish(str(draft), meta)
+    else:  # live network calls get exponential-backoff retries
+        from ..core.orchestrate import retry
+        result = retry(publisher.publish, str(draft), meta, retries=2, backoff=0.5)
 
     if result.ok:
         guard.consume(platform)

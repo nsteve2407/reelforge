@@ -107,7 +107,7 @@ uv pip install --python .venv/bin/python -e .
 .venv/bin/python -m reelforge.cli report --html dashboard.html   # spend/quota/bandit/status
 #   generative runs accept --enforce-budget to trim scenes to profile.budget.max_usd_per_video
 
-.venv/bin/python -m pytest                          # 71 tests
+.venv/bin/python -m pytest                          # 81 tests
 ```
 
 A run ingests → detects scenes / audio-energy / motion (+ action-cam telemetry if present) → **fuses signals classically** (normalize → weight → `scipy` peaks → soft-NMS) → cuts the top highlights → reframes to 9:16 → color-grades → (optional captions) → renders a draft → writes a **review card** and stops at the approval gate. Nothing publishes without approval. Captions need the optional `faster-whisper` extra; absent, they're skipped gracefully.
@@ -123,7 +123,9 @@ Everything above runs **offline in dry-run/fallback with zero keys.** Each exter
 | MiniMax (alt gen) | `MINIMAX_API_KEY`, `MINIMAX_GROUP_ID` | platform.minimax.io | uses fal / dry-run |
 | YouTube research | `YOUTUBE_API_KEY` | Google Cloud console | that source empty |
 | YouTube upload (OAuth) | `REELFORGE_YT_TOKEN_FILE` (or client id/secret/token) | GCP OAuth (scope `youtube.upload`, audit ~2–4 wks) | publish dry-run |
-| Instagram (Business) | `REELFORGE_IG_USER_ID`, `REELFORGE_IG_ACCESS_TOKEN`, `REELFORGE_IG_MEDIA_URL` | Meta app + IG business account | publish dry-run |
+| Instagram (Business) | `REELFORGE_IG_USER_ID`, `REELFORGE_IG_ACCESS_TOKEN`, + `REELFORGE_IG_MEDIA_URL` **or** `REELFORGE_HOST_S3_BUCKET`/`_GCS_BUCKET` (auto-hosts the draft to a public URL) | Meta app + IG business account | publish dry-run |
+
+**Helpers:** `reelforge auth youtube --client-secrets cs.json --out yt_token.json` mints the YouTube OAuth token; `auth check --token yt_token.json` validates it. Instagram needs the draft at a public URL — set `REELFORGE_IG_MEDIA_URL` or a host bucket and it's uploaded automatically. Live publish calls get exponential-backoff **retries**. Optional **Prefect** orchestration: `from reelforge.flows.prefect_flow import run_footage_orchestrated` (runs as a Prefect flow when Prefect is installed, else in-process).
 
 ```bash
 export ANTHROPIC_API_KEY=... FAL_KEY=... REELFORGE_YT_TOKEN_FILE=~/yt.json
@@ -137,12 +139,12 @@ index.html  styles.css  deep-dive.html   # GitHub Pages pitch + deep dive
 profiles/                 # ContentProfile configs (bike_pov, nursery_rhymes, tv_series_talk)
 pyproject.toml
 src/reelforge/
-  core/     # profile · storage · state · media · publish · generate · learn · budget · report · credentials · op · types
+  core/     # profile·storage·state·media·publish·generate·learn·budget·report·credentials·oauth·orchestrate·hosting·op·types
   ops/      # atomic ops: ingest · understand · build · review · publish · research · generate · learn
   adapters/ # credential-gated, lazy: youtube · instagram · analytics · fal · minimax
-  flows/    # footage.py · generative.py · hybrid.py · batch.py (multi-channel) · publish_run
-  cli.py    # typer CLI: doctor / setup / profiles / ops / run / publish / learn{…} / batch / report
-tests/      # 71 tests: pure-unit + real-ffmpeg integration + e2e all modes + publish/research/creds/learn/budget/batch
+  flows/    # footage · generative · hybrid · batch · prefect_flow (optional) · publish_run
+  cli.py    # typer CLI: doctor/setup/profiles/ops/run/publish/learn{…}/batch/report/auth{youtube,check}
+tests/      # 81 tests: pure-unit + real-ffmpeg + e2e all modes + publish/research/creds/learn/budget/batch/oauth/hosting/retry
 ```
 
 > Orchestration note: ops are pure functions composed by `flows/footage.py`; each maps 1:1 onto a Prefect `@task` when moving to a durable orchestrator — that's the only change. Storage is a local backend behind an fsspec-shaped interface (S3/GCS drop in later).

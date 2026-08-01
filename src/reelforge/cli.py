@@ -284,5 +284,40 @@ def report(
     led.close()
 
 
+auth_app = typer.Typer(add_completion=False, help="Credential minting (OAuth).")
+app.add_typer(auth_app, name="auth")
+
+
+@auth_app.command("youtube")
+def auth_youtube(
+    client_secrets: str = typer.Option(..., help="path to Google client_secrets.json (Desktop app)"),
+    out: str = typer.Option("yt_token.json", help="where to save the token JSON"),
+    port: int = typer.Option(0, help="local OAuth callback port (0 = auto)"),
+) -> None:
+    """Run the YouTube OAuth flow (opens a browser) and save the token JSON."""
+    from .core.oauth import mint_youtube_token, validate_client_secrets
+    ok, why = validate_client_secrets(client_secrets)
+    if not ok:
+        typer.echo(f"invalid client secrets: {why}"); raise typer.Exit(code=1)
+    typer.echo("opening browser for Google consent (scope: youtube.upload)...")
+    path = mint_youtube_token(client_secrets, out, port=port)
+    typer.echo(f"saved token -> {path}")
+    typer.echo(f"now: export REELFORGE_YT_TOKEN_FILE={path}")
+
+
+@auth_app.command("check")
+def auth_check(token: str = typer.Option(..., help="path to a saved token JSON")) -> None:
+    """Validate a saved token file has the fields the publisher needs."""
+    from .core.oauth import load_token
+    try:
+        t = load_token(token)
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"cannot read token: {e}"); raise typer.Exit(code=1)
+    have = [k for k in ("token", "refresh_token", "client_id", "client_secret") if t.get(k)]
+    typer.echo(f"token fields present: {', '.join(have) or '(none)'}")
+    if "refresh_token" not in have:
+        typer.echo("warning: no refresh_token — re-consent with access_type=offline")
+
+
 if __name__ == "__main__":
     app()

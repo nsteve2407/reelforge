@@ -62,8 +62,9 @@ CATALOG: list[CredSpec] = [
     ),
     CredSpec(
         "Instagram Reels (publish)", "instagram_reels",
-        ["REELFORGE_IG_USER_ID", "REELFORGE_IG_ACCESS_TOKEN",
-         "REELFORGE_IG_MEDIA_URL"], ["REELFORGE_IG_USER_ID", "REELFORGE_IG_ACCESS_TOKEN"],
+        ["REELFORGE_IG_USER_ID", "REELFORGE_IG_ACCESS_TOKEN", "REELFORGE_IG_MEDIA_URL",
+         "REELFORGE_HOST_S3_BUCKET", "REELFORGE_HOST_GCS_BUCKET"],
+        ["REELFORGE_IG_USER_ID", "REELFORGE_IG_ACCESS_TOKEN"],
         "Instagram BUSINESS account + Meta app w/ instagram_business_content_publish; "
         "draft must be hosted at a PUBLIC url",
         "developers.facebook.com → App → long-lived token; link IG business account",
@@ -120,6 +121,9 @@ def load_credentials(env: dict | None = None) -> dict:
         "ig_user_id": e.get("REELFORGE_IG_USER_ID"),
         "access_token": e.get("REELFORGE_IG_ACCESS_TOKEN"),
         "media_url": e.get("REELFORGE_IG_MEDIA_URL"),
+        "s3_bucket": e.get("REELFORGE_HOST_S3_BUCKET"),
+        "s3_region": e.get("REELFORGE_HOST_S3_REGION"),
+        "gcs_bucket": e.get("REELFORGE_HOST_GCS_BUCKET"),
     }.items() if v}
     if ig:
         creds["instagram_reels"] = ig
