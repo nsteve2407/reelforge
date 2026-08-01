@@ -37,8 +37,8 @@ edit:
   hook_first: true
   reframe: subject_track
   captions:
-    enabled: true
-    style: karaoke_bold
+    enabled: false               # bike POV is ~wordless; speech-to-text captions add little.
+    style: karaoke_bold          # (footage captions need faster-whisper, which won't build on this OS)
     lang: en
   color_grade:
     lut: teal_orange_punch
