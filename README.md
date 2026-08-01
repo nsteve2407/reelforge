@@ -6,6 +6,8 @@
 
 📄 **Live pitch / plan → [GitHub Pages site](https://nsteve2407.github.io/reelforge/)**  ·  🔬 **[Deep dive: LLM-usage map, atomic tasks, providers, learning loop & stack](https://nsteve2407.github.io/reelforge/deep-dive.html)**
 
+> 🤝 **Continuing this project (agent or human)? Start with [`AGENTS.md`](AGENTS.md)** — the full handoff: current status, architecture, the op contract, env gotchas, how to run/test, go-live credentials, and exactly what's not done.
+
 ## Use AI where it earns its place
 
 Of ~40 atomic tasks, only **5** genuinely need an LLM (ideation, scripting, media-prompt writing, multimodal safety judgment, feedback synthesis) — and each is profile-gated. Everything else is **deterministic OSS / classical**: ingest, scene detection, transcription, audio/motion/telemetry signals, highlight fusion, cutting, reframing, captions, color grade, upload, analytics, bandit selection, scoring, attribution. **Claude has zero native media generation** — it writes words/prompts, judges, and orchestrates; pixels & audio come from specialist models via an aggregator (fal.ai). See the deep dive for the full per-task table.
