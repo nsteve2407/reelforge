@@ -23,7 +23,8 @@
       <a href="#learning">Learning</a>
       <a href="#stack">Tech stack</a>
       <a href="#run">Run it</a>
-      <a href="#setup" style="color:#b9a8ff;font-weight:700">Setup TODOs</a>
+      <a href="#setup">Setup</a>
+      <a href="#checklist" style="color:#b9a8ff;font-weight:700">Your TODOs ✓</a>
     </div>
   </div>
 </nav>
@@ -482,6 +483,92 @@ Dockerfile  docker-compose.yml  requirements.txt</code></pre>
   </div>
 </section>
 
+<!-- CHECKLIST -->
+<section id="checklist">
+  <div class="wrap">
+    <div class="kicker">Your move · a tick-box plan to get this live</div>
+    <h2>Your setup checklist</h2>
+    <p class="lede">Concrete, ordered actions <b>for you</b> — accounts to create, keys to generate, platform setup, and how to go from a safe dry-run to your first live post. Progress is saved in your browser. Tags mark what's only needed for certain platforms/modes; untagged items are the baseline.</p>
+
+    <div class="todo-progress">
+      <div class="row"><span class="tp-label" id="tp-label">0 / 0 done</span><button class="tp-reset" id="tp-reset">reset</button></div>
+      <div class="tp-bar"><div class="tp-fill" id="tp-fill"></div></div>
+    </div>
+
+    <div class="checklist">
+
+      <div class="todo-group">
+        <h3><span class="n">1</span> Local setup (do this first)</h3>
+        <p class="gsub">Get the pipeline running offline in dry-run before touching any account.</p>
+        <div class="todo-item"><input type="checkbox" id="c-ffmpeg"><label for="c-ffmpeg"><span>Install <code>ffmpeg</code> + <code>ffprobe</code></span><span class="sub">the only hard system dependency</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-venv"><label for="c-venv"><span>Create the env: <code>uv venv --python 3.12 .venv</code> → <code>uv pip install -e .</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-doctor"><label for="c-doctor"><span>Run <code>reelforge doctor</code> — confirm ffmpeg/opencv/scenedetect OK</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-demo"><label for="c-demo"><span>Dry-run a demo: <code>reelforge run --profile bike_pov --demo</code></span><span class="sub">produces a 9:16 draft + review card, nothing published</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-tests"><label for="c-tests"><span>Optional: <code>reelforge ... pytest</code> — 81 tests green</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">2</span> Choose your channel &amp; niche</h3>
+        <p class="gsub">Niche is data — one YAML profile per channel.</p>
+        <div class="todo-item"><input type="checkbox" id="c-profile"><label for="c-profile"><span>Pick a starter profile (<code>bike_pov</code> / <code>nursery_rhymes</code> / <code>tv_series_talk</code>) or copy one to a new <code>profiles/&lt;you&gt;.yaml</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-audience"><label for="c-audience"><span>Set <code>audience</code> (intent × segment × relationship), <code>edit.captions</code>, and <code>edit.color_grade.look</code></span><span class="sub">see the Audience taxonomy above</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-budget"><label for="c-budget"><span>Set <code>budget.max_usd_per_video</code> and <code>publish.daily_cap</code></span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">3</span> Generative keys <span class="tag-opt gen">generative / hybrid only</span></h3>
+        <p class="gsub">Skip entirely for footage channels (bikes). Needed for AI scenes/voice/music.</p>
+        <div class="todo-item"><input type="checkbox" id="c-anthropic"><label for="c-anthropic"><span>Create an Anthropic account → <code>ANTHROPIC_API_KEY</code> <span class="tag-opt gen">scripts/hooks</span></span><span class="sub">console.anthropic.com → API Keys (else deterministic fallback)</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-fal"><label for="c-fal"><span>Create a fal.ai account → <code>FAL_KEY</code> <span class="tag-opt gen">video/image/voice/music</span></span><span class="sub">fal.ai → Dashboard → Keys (pay-per-use)</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-minimax"><label for="c-minimax"><span>Optional alt provider: MiniMax → <code>MINIMAX_API_KEY</code> + <code>MINIMAX_GROUP_ID</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-music"><label for="c-music"><span>Decide music source — prefer <b>Stable Audio</b> for commercial safety (avoid Suno/Udio licensing)</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">4</span> YouTube publishing <span class="tag-opt yt">YouTube</span></h3>
+        <p class="gsub">Plan ~2–4 weeks for the OAuth compliance audit before public uploads work.</p>
+        <div class="todo-item"><input type="checkbox" id="c-ytchannel"><label for="c-ytchannel"><span>Create/choose the YouTube channel you'll post to</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-gcp"><label for="c-gcp"><span>Google Cloud project → enable <b>YouTube Data API v3</b></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-ytkey"><label for="c-ytkey"><span>Create an API key → <code>YOUTUBE_API_KEY</code> <span class="tag-opt">trend research</span></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-ytoauth"><label for="c-ytoauth"><span>OAuth consent screen + OAuth client (<b>Desktop</b>) → download <code>client_secrets.json</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-ytmint"><label for="c-ytmint"><span>Mint the token: <code>reelforge auth youtube --client-secrets cs.json</code> → set <code>REELFORGE_YT_TOKEN_FILE</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-ytaudit"><label for="c-ytaudit"><span>Submit the API compliance audit for public posting (demo video + use-case)</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">5</span> Instagram publishing <span class="tag-opt ig">Instagram</span></h3>
+        <p class="gsub">Business account only; the API fetches your video from a public URL.</p>
+        <div class="todo-item"><input type="checkbox" id="c-igbiz"><label for="c-igbiz"><span>Convert the IG account to <b>Business</b> and link a Facebook Page</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-igapp"><label for="c-igapp"><span>Create a Meta app with <code>instagram_business_content_publish</code>; get a long-lived token → <code>REELFORGE_IG_USER_ID</code> + <code>REELFORGE_IG_ACCESS_TOKEN</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-ighost"><label for="c-ighost"><span>Set a public host: <code>REELFORGE_IG_MEDIA_URL</code> <b>or</b> a bucket (<code>REELFORGE_HOST_S3_BUCKET</code>/<code>_GCS_BUCKET</code> + cloud creds)</span><span class="sub">the draft is auto-uploaded to a public URL before publishing</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">6</span> Compliance &amp; safety <span class="tag-opt req">don't skip</span></h3>
+        <div class="todo-item"><input type="checkbox" id="c-coppa"><label for="c-coppa"><span>Kids content: set <code>made_for_kids: true</code> + <code>ai_disclosure: true</code> (COPPA)</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-disclose"><label for="c-disclose"><span>Turn on <code>ai_disclosure</code> for any AI-generated/edited video</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-fairuse"><label for="c-fairuse"><span>TV-talk: commentary only — never re-upload copyrighted clips; b-roll must be generated/licensed</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">7</span> Go live (first real post)</h3>
+        <div class="todo-item"><input type="checkbox" id="c-setup"><label for="c-setup"><span>Run <code>reelforge setup</code> — the components you configured show <b>OK</b></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-live"><label for="c-live"><span>Publish for real: <code>reelforge run --profile &lt;you&gt; --input clip.mp4 --publish --live</code></span><span class="sub">stops at the review card (approval required)</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-approve"><label for="c-approve"><span>Approve the draft, then confirm the post is live on the platform</span></label></div>
+      </div>
+
+      <div class="todo-group">
+        <h3><span class="n">8</span> Operate &amp; improve</h3>
+        <div class="todo-item"><input type="checkbox" id="c-ingest"><label for="c-ingest"><span>Feed results back: <code>reelforge learn ingest --run &lt;id&gt; --hook … --views … --retention …</code></span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-insights"><label for="c-insights"><span><code>reelforge learn insights</code> + <code>learn train</code> to tune hooks &amp; the scorer</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-report"><label for="c-report"><span><code>reelforge report --html dashboard.html</code> — watch spend, quota, bandit</span></label></div>
+        <div class="todo-item"><input type="checkbox" id="c-batch"><label for="c-batch"><span>Scale up: <code>reelforge batch --profiles a,b,c</code> (add <code>--enforce-budget</code>)</span></label></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div class="logo" style="justify-content:center;margin-bottom:6px"><span class="spark"></span> Reel<b>Forge</b></div>
@@ -501,6 +588,41 @@ Dockerfile  docker-compose.yml  requirements.txt</code></pre>
     },
     flowchart: { curve: "basis", nodeSpacing: 22, rankSpacing: 46 }
   });
+  // Interactive checklist: persist ticks in localStorage + progress bar.
+  (function () {
+    var boxes = document.querySelectorAll(".checklist input[type=checkbox]");
+    if (!boxes.length) return;
+    var KEY = "reelforge_todo_v1";
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+    var fill = document.getElementById("tp-fill");
+    var label = document.getElementById("tp-label");
+    function update() {
+      var done = 0;
+      boxes.forEach(function (b) {
+        if (b.checked) done++;
+        b.closest(".todo-item").classList.toggle("done", b.checked);
+      });
+      var pct = Math.round((100 * done) / boxes.length);
+      fill.style.width = pct + "%";
+      label.textContent = done + " / " + boxes.length + " done (" + pct + "%)";
+    }
+    boxes.forEach(function (b) {
+      b.checked = !!saved[b.id];
+      b.addEventListener("change", function () {
+        saved[b.id] = b.checked;
+        localStorage.setItem(KEY, JSON.stringify(saved));
+        update();
+      });
+    });
+    document.getElementById("tp-reset").addEventListener("click", function () {
+      saved = {};
+      localStorage.removeItem(KEY);
+      boxes.forEach(function (b) { b.checked = false; });
+      update();
+    });
+    update();
+  })();
 </script>
 </body>
 </html>
