@@ -47,6 +47,22 @@ CREATE TABLE IF NOT EXISTS quota (
     units    INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (platform, day)
 );
+CREATE TABLE IF NOT EXISTS bandit_arms (
+    scope TEXT NOT NULL,
+    arm   TEXT NOT NULL,
+    alpha REAL NOT NULL DEFAULT 1.0,
+    beta  REAL NOT NULL DEFAULT 1.0,
+    PRIMARY KEY (scope, arm)
+);
+CREATE TABLE IF NOT EXISTS post_metrics (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id   TEXT,
+    post_id  TEXT,
+    platform TEXT,
+    features TEXT NOT NULL DEFAULT '{}',
+    metrics  TEXT NOT NULL DEFAULT '{}',
+    ts       REAL NOT NULL
+);
 """
 
 
@@ -153,6 +169,48 @@ class Ledger:
         )
         self.conn.commit()
         return self.quota_used(platform, day)
+
+    # ---- bandit ----
+    def get_arm(self, scope: str, arm: str) -> tuple[float, float]:
+        row = self.conn.execute(
+            "SELECT alpha,beta FROM bandit_arms WHERE scope=? AND arm=?", (scope, arm)
+        ).fetchone()
+        return (float(row["alpha"]), float(row["beta"])) if row else (1.0, 1.0)
+
+    def set_arm(self, scope: str, arm: str, alpha: float, beta: float) -> None:
+        self.conn.execute(
+            "INSERT INTO bandit_arms(scope,arm,alpha,beta) VALUES (?,?,?,?) "
+            "ON CONFLICT(scope,arm) DO UPDATE SET alpha=excluded.alpha, beta=excluded.beta",
+            (scope, arm, alpha, beta),
+        )
+        self.conn.commit()
+
+    def list_arms(self, scope: str) -> list[dict]:
+        rows = self.conn.execute(
+            "SELECT arm,alpha,beta FROM bandit_arms WHERE scope=? ORDER BY arm", (scope,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    # ---- post metrics ----
+    def add_metrics(self, run_id: str | None, post_id: str, platform: str,
+                    features: dict, metrics: dict) -> int:
+        cur = self.conn.execute(
+            "INSERT INTO post_metrics(run_id,post_id,platform,features,metrics,ts) "
+            "VALUES (?,?,?,?,?,?)",
+            (run_id, post_id, platform, json.dumps(features), json.dumps(metrics), _now()),
+        )
+        self.conn.commit()
+        return int(cur.lastrowid)
+
+    def list_metrics(self) -> list[dict]:
+        rows = self.conn.execute("SELECT * FROM post_metrics ORDER BY id").fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["features"] = json.loads(d["features"])
+            d["metrics"] = json.loads(d["metrics"])
+            out.append(d)
+        return out
 
     def close(self) -> None:
         self.conn.close()

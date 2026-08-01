@@ -19,7 +19,7 @@ from ..core.profile import ContentProfile, SourceMode
 from ..core.state import Ledger
 from ..core.storage import Storage
 from ..core.types import SignalTrack
-from ..ops import ingest, understand, build, review, publish as pub
+from ..ops import ingest, understand, build, review, learn, publish as pub
 
 # Default fusion weights per signal; profile.understand.score_for can re-bias.
 _DEFAULT_WEIGHTS = {
@@ -63,6 +63,8 @@ def run_footage(
 
     try:
         ledger.update_run(run_id, "ingesting")
+        hook = learn.op_select_hook(ctx).outputs["hook"]
+        ledger.update_run(run_id, "ingesting", {"hook": hook})
         info = ingest.op_probe(ctx, input_path).outputs["media"]
         source = input_path
         if profile.source.proxy_transcode:
@@ -141,6 +143,7 @@ def run_footage(
 
         return {
             "run_id": run_id,
+            "hook": hook,
             "status": status,
             "draft": str(draft),
             "thumb": str(thumb),

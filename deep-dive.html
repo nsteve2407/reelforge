@@ -318,6 +318,7 @@ flowchart TB
     <div class="kicker">Question 3 · how the learning loop improves the next generation</div>
     <h2>The learning loop</h2>
     <p class="lede">Views improve because the system <b>logs what it shipped, measures what happened, and biases the next run</b> — using classical ML, not "ask an LLM if it'll go viral." Two complementary mechanisms: a <b>bandit</b> that keeps picking better hooks over time, and a <b>pre-publish scorer</b> that ranks candidate variants before they're posted.</p>
+    <div class="callout good"><b>✅ Built (Phase 4).</b> Shipped as a dependency-light, offline-testable implementation: a Beta-Bernoulli <b>Thompson-sampling bandit</b> over hook archetypes (persisted in the ledger) + a numpy <b>logistic pre-publish scorer</b> — with <b>MABWiser</b> / <b>XGBoost+SHAP</b> as drop-in production swaps behind the same interface. Try it: <code>reelforge learn insights</code> · <code>learn ingest</code> · <code>learn train</code>.</div>
 
     <div class="diagram" style="margin-top:22px">
       <pre class="mermaid">

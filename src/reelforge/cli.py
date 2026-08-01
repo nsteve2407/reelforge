@@ -71,7 +71,8 @@ def ops() -> None:
 def run(
     profile: str = typer.Option(..., help="profile id or path to yaml"),
     input: Optional[str] = typer.Option(None, help="input video path (footage mode)"),
-    topic: Optional[str] = typer.Option(None, help="topic/brief (generative mode)"),
+    topic: Optional[str] = typer.Option(None, help="topic/brief (generative/hybrid mode)"),
+    voice: Optional[str] = typer.Option(None, help="narration audio/video (hybrid mode)"),
     demo: bool = typer.Option(False, help="synthesize a test clip (footage mode)"),
     profiles_dir: str = typer.Option("profiles", help="profiles directory"),
     work: str = typer.Option(".rf_work", help="working directory"),
@@ -80,7 +81,7 @@ def run(
     live: bool = typer.Option(False, help="real upload/generation instead of dry-run (needs creds)"),
 ) -> None:
     """Run the pipeline end to end (stops at the review gate). Routes by source.mode."""
-    from .flows import run_footage, run_generative  # lazy
+    from .flows import run_footage, run_generative, run_hybrid  # lazy
 
     prof = load_profile(profile, profiles_dir=profiles_dir)
 
@@ -97,6 +98,13 @@ def run(
         result = run_generative(prof, topic=topic, work_root=work,
                                 auto_approve=auto_approve, publish=publish,
                                 dry_run=not live, creds=creds)
+    elif prof.source.mode.value == "hybrid":
+        typer.echo(f"running hybrid profile '{prof.id}'"
+                   + (f" on topic '{topic}'" if topic else "")
+                   + (f" with narration {voice}" if voice else " (generated narration)"))
+        result = run_hybrid(prof, topic=topic, voice_input=voice, work_root=work,
+                            auto_approve=auto_approve, publish=publish,
+                            dry_run=not live, creds=creds)
     else:
         src = input
         if demo or not src:
@@ -154,6 +162,75 @@ def setup() -> None:
         typer.echo(f"       env:     {', '.join(r['set']) or '(none set)'}"
                    + (f"  missing: {', '.join(r['missing_required'])}" if r["missing_required"] else ""))
         typer.echo(f"       unlocks: {r['gate']}\n")
+
+
+learn_app = typer.Typer(add_completion=False, help="Learning loop: hook bandit + pre-publish scorer.")
+app.add_typer(learn_app, name="learn")
+
+
+def _ctx(work: str, run_label: str = "learn"):
+    from .core.context import OpContext
+    from .core.profile import ContentProfile
+    from .core.state import Ledger
+    from .core.storage import Storage
+    led = Ledger(Path(work) / "reelforge.db")
+    rid = led.create_run(run_label)
+    return OpContext(run_id=rid, profile=ContentProfile(id=run_label),
+                     storage=Storage(Path(work) / rid), ledger=led)
+
+
+@learn_app.command("insights")
+def learn_insights(work: str = typer.Option(".rf_work", help="working directory")) -> None:
+    """Show the hook bandit ranking + logged-post count + scorer status."""
+    from .core.state import Ledger
+    from .core.learn import ThompsonBandit, LogisticScorer
+    led = Ledger(Path(work) / "reelforge.db")
+    typer.echo("Hook bandit (ranked by posterior mean):")
+    for s in ThompsonBandit(led).stats():
+        bar = "#" * int(round(s["mean"] * 20))
+        typer.echo(f"  {s['arm']:14} mean={s['mean']:.3f} pulls={s['pulls']:.0f}  {bar}")
+    typer.echo(f"\nlogged posts: {len(led.list_metrics())}")
+    sp = Path(work) / "scorer.json"
+    typer.echo(f"scorer: {'trained (' + sp.name + ')' if sp.exists() else 'not trained'}")
+    led.close()
+
+
+@learn_app.command("ingest")
+def learn_ingest(
+    run: str = typer.Option(..., help="run id the post came from"),
+    platform: str = typer.Option("youtube_shorts"),
+    hook: str = typer.Option(..., help="hook archetype used"),
+    caption_style: str = typer.Option("karaoke_bold"),
+    lut: str = typer.Option("none"),
+    music_mood: str = typer.Option("none"),
+    length: float = typer.Option(0.0, help="video length seconds"),
+    views: int = typer.Option(0),
+    watch: float = typer.Option(0.0, help="avg view duration seconds"),
+    retention: Optional[float] = typer.Option(None, help="first-3s retention 0..1"),
+    work: str = typer.Option(".rf_work"),
+) -> None:
+    """Log a published post's outcome and update the bandit."""
+    from .ops import learn as L
+    ctx = _ctx(work)
+    ctx.run_id = run  # attribute the metrics row to the real run
+    features = {"hook": hook, "caption_style": caption_style, "lut": lut,
+                "music_mood": music_mood, "length_s": length}
+    metrics = {"views": views, "avg_view_duration": watch, "length_s": length}
+    if retention is not None:
+        metrics["retention3s"] = retention
+    res = L.op_log_metrics(ctx, run, platform, features, metrics)
+    typer.echo(f"logged; reward={res.outputs['reward']:.3f} (hook '{hook}')")
+    ctx.ledger.close()
+
+
+@learn_app.command("train")
+def learn_train(work: str = typer.Option(".rf_work")) -> None:
+    """Retrain the pre-publish scorer from logged metrics."""
+    from .ops import learn as L
+    ctx = _ctx(work)
+    res = L.op_train_scorer(ctx)
+    typer.echo(f"trained on {res.outputs['n_rows']} row(s), accuracy={res.outputs['accuracy']:.2f}")
+    ctx.ledger.close()
 
 
 if __name__ == "__main__":
