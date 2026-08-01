@@ -40,9 +40,9 @@ Docs that mirror this and MUST be kept in sync when you change scope: `README.md
 
 - **System Python is 3.6.9** (Ubuntu 18.04) — too old for the stack. We provisioned **Python 3.12 in userspace via `uv`**. Always use the project venv: `/home/steve/Agent Lab/reelforge/.venv/bin/python`. Never the system `python3`.
 - `uv` is at `~/.local/bin/uv` (`export PATH="$HOME/.local/bin:$PATH"`).
-- **ffmpeg/ffprobe are the OLD 3.4.11 build.** Only use widely-supported filters (scale, crop, eq, curves, colorbalance, hue, subtitles/libass, concat, volume, amix WITHOUT `weights`/`normalize`, anullsrc, sine, color, drawtext). Newer filter options silently error — test on this ffmpeg.
+- **ffmpeg/ffprobe:** upgraded to a **static 7.0.2** build in `~/.local/bin` (was system 3.4.11). Code still uses 3.4-safe filters for portability (only widely-supported: scale, crop, eq, curves, colorbalance, hue, subtitles/libass, concat, volume, amix, anullsrc, sine, color, drawtext). If a shell shows 3.4.11, prepend `~/.local/bin` to PATH.
 - **GPU: GTX 1060 6 GB.** Fine for the footage pipeline (faster-whisper small/medium + INT8). Production video/music generation needs cloud.
-- `.venv/`, `*.db`, `.rf_*/` runtime dirs are gitignored. Never commit them.
+- `.venv/`, `.env`, `*.db`, `.rf_*/` runtime dirs are gitignored. Never commit them.
 
 ### First-time setup / rebuild the env
 ```bash
@@ -50,7 +50,18 @@ export PATH="$HOME/.local/bin:$PATH"
 cd "/home/steve/Agent Lab/reelforge"
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e .
-.venv/bin/python -m pytest              # expect 81 passed
+.venv/bin/python -m pytest              # expect 86 passed
+```
+
+### Config layers
+- **`reelforge.yaml`** (committed, non-secret): workspace prefs — `active_profile` (currently `bike_pov`), `profiles_dir`, `work_dir`, `auto_approve`, `enforce_budget`. Read by `reelforge config show` / `config set-profile <id>`. It's a convenience record + hint; it does NOT make `run` assume a profile (still explicit `--profile`).
+- **`.env`** (gitignored; template `.env.example`): API keys/tokens. Auto-loaded at CLI startup (`core/config.load_dotenv`, `setdefault` semantics). Copy `.env.example` → `.env`, fill what you need, then `reelforge setup` shows readiness.
+
+### Editable-install caveat (bit us once)
+If code edits under `src/` don't take effect at runtime, the venv may hold a **copied** (non-editable) install. Fix + verify:
+```bash
+uv pip install --python .venv/bin/python -e . --reinstall
+.venv/bin/python -c "import reelforge.cli; print(reelforge.cli.__file__)"   # must be under src/
 ```
 
 ---

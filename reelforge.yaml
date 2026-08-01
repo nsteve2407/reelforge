@@ -1,0 +1,14 @@
+# ReelForge workspace config (non-secret; safe to commit).
+# Secrets go in .env (copy .env.example -> .env). See AGENTS.md / `reelforge config show`.
+
+# The profile you're currently working on. `reelforge config show` prints a
+# ready-to-run command for it. (run still takes --profile explicitly.)
+active_profile: bike_pov
+
+# Where profiles and run outputs live (relative to the repo root).
+profiles_dir: profiles
+work_dir: .rf_work
+
+# Convenience defaults you can flip once you trust the output:
+auto_approve: false      # true = don't stop at the review gate
+enforce_budget: false    # true = trim generative scenes to budget.max_usd_per_video

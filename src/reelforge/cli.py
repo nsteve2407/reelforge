@@ -21,6 +21,12 @@ from . import ops  # noqa: F401  (registers ops)
 app = typer.Typer(add_completion=False, help="Generic short-form content pipeline.")
 
 
+@app.callback()
+def _main() -> None:
+    """Load .env (secrets) before any command; safe if absent."""
+    from .core.config import load_dotenv
+    load_dotenv()
+
 @app.command()
 def doctor() -> None:
     """Check the runtime environment."""
@@ -317,6 +323,54 @@ def auth_check(token: str = typer.Option(..., help="path to a saved token JSON")
     typer.echo(f"token fields present: {', '.join(have) or '(none)'}")
     if "refresh_token" not in have:
         typer.echo("warning: no refresh_token — re-consent with access_type=offline")
+
+
+config_app = typer.Typer(add_completion=False, help="Workspace config (reelforge.yaml).")
+app.add_typer(config_app, name="config")
+
+
+@config_app.command("show")
+def config_show(
+    file: str = typer.Option("reelforge.yaml", help="workspace config path"),
+) -> None:
+    """Show workspace config, active profile summary, and credential readiness."""
+    from .core.config import load_workspace
+    from .core.credentials import env_status
+    cfg = load_workspace(file)
+    typer.echo(f"workspace config: {file}")
+    typer.echo(f"  active_profile : {cfg.active_profile or '(unset)'}")
+    typer.echo(f"  profiles_dir   : {cfg.profiles_dir}")
+    typer.echo(f"  work_dir       : {cfg.work_dir}")
+    typer.echo(f"  auto_approve   : {cfg.auto_approve}")
+    typer.echo(f"  enforce_budget : {cfg.enforce_budget}")
+    if cfg.active_profile:
+        try:
+            p = load_profile(cfg.active_profile, profiles_dir=cfg.profiles_dir)
+            typer.echo(f"\nactive profile '{p.id}': mode={p.source.mode.value}, "
+                       f"niche={p.niche}, platforms={p.publish.platforms}")
+            typer.echo(f"  run it:  reelforge run --profile {p.id} --demo")
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"\n! active_profile '{cfg.active_profile}' not loadable: {e}")
+    ready = [r["component"] for r in env_status() if r["ready"]]
+    typer.echo(f"\ncredentials ready: {', '.join(ready) or 'none (all dry-run) — see `reelforge setup`'}")
+
+
+@config_app.command("set-profile")
+def config_set_profile(
+    profile: str = typer.Argument(..., help="profile id to record as active"),
+    file: str = typer.Option("reelforge.yaml", help="workspace config path"),
+    profiles_dir: str = typer.Option("profiles"),
+) -> None:
+    """Record which profile you're working on in reelforge.yaml."""
+    from .core.config import load_workspace, save_workspace
+    try:
+        load_profile(profile, profiles_dir=profiles_dir)
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"profile '{profile}' not found: {e}"); raise typer.Exit(code=1)
+    cfg = load_workspace(file)
+    cfg.active_profile = profile
+    save_workspace(cfg, file)
+    typer.echo(f"active_profile = {profile}  (saved to {file})")
 
 
 if __name__ == "__main__":

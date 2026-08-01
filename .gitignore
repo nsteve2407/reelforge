@@ -15,3 +15,8 @@ dist/
 .rf_smoke*/
 *.db
 *.sqlite
+
+# secrets (keep .env.example, ignore real .env)
+.env
+.env.*
+!.env.example
