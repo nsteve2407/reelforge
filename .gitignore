@@ -12,7 +12,7 @@ dist/
 
 # ReelForge runtime output
 .rf_work/
-.rf_smoke*/
+.rf_*/
 *.db
 *.sqlite
 
