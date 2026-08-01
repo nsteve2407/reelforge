@@ -15,6 +15,26 @@ from pathlib import Path
 from ..core.generate import GenResult
 
 
+def _find_url(node) -> str | None:
+    """Recursively find the first media URL in a fal result (handles audio_file,
+    video, image(s), files, url, nested dicts/lists)."""
+    if isinstance(node, str):
+        return node if node.startswith("http") else None
+    if isinstance(node, dict):
+        if isinstance(node.get("url"), str):
+            return node["url"]
+        for v in node.values():
+            u = _find_url(v)
+            if u:
+                return u
+    if isinstance(node, list):
+        for v in node:
+            u = _find_url(v)
+            if u:
+                return u
+    return None
+
+
 class FalGenerator:
     provider = "fal"
 
@@ -27,14 +47,7 @@ class FalGenerator:
         import fal_client  # lazy
 
         result = fal_client.subscribe(model, arguments=args)
-        url = None
-        for key in ("video", "audio", "image"):
-            node = result.get(key)
-            if isinstance(node, dict) and node.get("url"):
-                url = node["url"]
-                break
-        if not url and isinstance(result.get("url"), str):
-            url = result["url"]
+        url = _find_url(result)
         if not url:
             raise RuntimeError(f"fal model {model} returned no media url: {result}")
         Path(out).parent.mkdir(parents=True, exist_ok=True)

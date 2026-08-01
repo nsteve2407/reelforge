@@ -121,7 +121,10 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
               play_w: int = 1080, play_h: int = 1920) -> str:
     """Return valid ASS subtitle text for the given cues. Pure/testable."""
     bold = 1 if "bold" in style else 0
-    fontsize = int(play_h * 0.055)
+    centered = "center" in style
+    fontsize = int(play_h * (0.050 if centered else 0.055))
+    align = 5 if centered else 2            # ASS: 5=middle-center, 2=bottom-center
+    margin_v = 0 if centered else int(play_h * 0.10)
     header = (
         "[Script Info]\n"
         "ScriptType: v4.00+\n"
@@ -131,7 +134,7 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n"
         f"Style: Default,Arial,{fontsize},&H00FFFFFF,&H00000000,&H64000000,"
-        f"{bold},1,3,1,2,40,40,{int(play_h*0.10)}\n\n"
+        f"{bold},1,3,1,{align},60,60,{margin_v}\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
@@ -264,3 +267,25 @@ def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
         msg = "caption burn unavailable (no libass); passthrough"
     return OpResult(outputs={"path": str(out), "captioned": captioned},
                     artifacts={"captioned": str(out)}, message=msg)
+
+
+@op("add_music_bed")
+def op_add_music_bed(ctx: OpContext, video: str, music: str, *,
+                     music_gain: float = 0.8, source_gain: float = 0.25,
+                     name: str = "scored") -> OpResult:
+    """Mix a music bed UNDER the clip's original audio (ducked). One job: score it."""
+    out = ctx.storage.path("build", f"{name}.mp4")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    has_audio = media.probe(video).has_audio
+    if has_audio:
+        fc = (f"[0:a]volume={source_gain}[a0];[1:a]volume={music_gain}[a1];"
+              f"[a0][a1]amix=inputs=2:duration=first[a]")
+    else:
+        fc = f"[1:a]volume={music_gain}[a]"
+    media.run([
+        "ffmpeg", "-y", "-i", str(video), "-i", str(music),
+        "-filter_complex", fc, "-map", "0:v:0", "-map", "[a]",
+        "-c:v", "copy", "-c:a", "aac", "-shortest", str(out),
+    ])
+    return OpResult(outputs={"path": str(out)}, artifacts={"scored": str(out)},
+                    message=f"music bed mixed (music={music_gain}, orig={source_gain})")

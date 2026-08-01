@@ -1,0 +1,34 @@
+{
+  "run_id": "e3ddd3a54f07",
+  "profile": "bike_pov",
+  "draft": "/home/steve/Agent Lab/reelforge/.rf_live/e3ddd3a54f07/build/scored.mp4",
+  "thumb": "/home/steve/Agent Lab/reelforge/.rf_live/e3ddd3a54f07/review/thumb.jpg",
+  "duration_s": 13.85,
+  "resolution": "1080x1920",
+  "caption": "mountain & city cycling POV",
+  "hashtags": [
+    "#Shorts",
+    "#mtb",
+    "#cycling",
+    "#pov"
+  ],
+  "platforms": [
+    "youtube_shorts",
+    "instagram_reels"
+  ],
+  "ai_disclosure": false,
+  "made_for_kids": false,
+  "approval": "required",
+  "highlights": [
+    {
+      "start_s": 0.0,
+      "end_s": 13.847167,
+      "score": 1.7,
+      "reasons": {
+        "scene_change": 0.0,
+        "audio_energy": 0.0,
+        "motion": 1.0
+      }
+    }
+  ]
+}

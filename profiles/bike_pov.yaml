@@ -37,15 +37,21 @@ edit:
   hook_first: true
   reframe: subject_track
   captions:
-    enabled: false               # bike POV is ~wordless; speech-to-text captions add little.
-    style: karaoke_bold          # (footage captions need faster-whisper, which won't build on this OS)
-    lang: en
+    enabled: true
+    source: ai                   # Claude 'sees' the scene + writes rider-voice overlay lines
+    style: reflective_center     # centered, clean overlay
+    count: 4
+    keyframes: 3                 # frames sent to Claude vision
+    themes: [biker life, relationships, faith, inner peace, self improvement, gratitude]
   color_grade:
     lut: teal_orange_punch
     look: vivid_action
   music:
-    source: stable_audio         # clean commercial licensing
-    mood: energetic_electronic
+    enabled: true
+    source: fal                  # fal.ai Stable Audio bed under the ride audio
+    mood: warm reflective lofi cinematic
+    gain: 0.85
+    duck_original: 0.22
   voiceover:
     enabled: false
 

@@ -67,8 +67,12 @@ class Understand(_Base):
 
 class Captions(_Base):
     enabled: bool = False
+    source: str = "transcribe"   # ai | transcribe | off — 'ai' = Claude-written overlay lines
     style: str = "karaoke_bold"
     lang: str = "en"
+    count: int = 4               # how many AI overlay lines
+    keyframes: int = 3           # frames sent to Claude vision to describe the scene
+    themes: list[str] = Field(default_factory=list)
 
 
 class ColorGrade(_Base):
@@ -77,8 +81,11 @@ class ColorGrade(_Base):
 
 
 class Music(_Base):
-    source: Optional[str] = None
+    enabled: bool = False
+    source: Optional[str] = None   # fal | local | none
     mood: Optional[str] = None
+    gain: float = 0.8              # music bed volume
+    duck_original: float = 0.25    # original clip audio volume under the music
 
 
 class Voiceover(_Base):

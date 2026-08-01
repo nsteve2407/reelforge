@@ -21,3 +21,8 @@ dist/
 .env.*
 !.env.example
 secrets/
+
+# local test media
+TestVid.*
+*.mp4
+*.MP4

@@ -11,6 +11,7 @@ human-review card (Phase 1 = "draft -> notify -> manual upload").
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -19,7 +20,9 @@ from ..core.profile import ContentProfile, SourceMode
 from ..core.state import Ledger
 from ..core.storage import Storage
 from ..core.types import SignalTrack
-from ..ops import ingest, understand, build, review, learn, publish as pub
+from ..ops import ingest, understand, build, review, learn, caption
+from ..ops import generate as G
+from ..ops import publish as pub
 
 # Default fusion weights per signal; profile.understand.score_for can re-bias.
 _DEFAULT_WEIGHTS = {
@@ -110,13 +113,44 @@ def run_footage(
             clip = build.op_cut(ctx, input_path, seg, name=f"clip{i}").outputs["clip"]
             clip = build.op_reframe(ctx, clip, target, mode=profile.edit.reframe).outputs["path"]
             clip = build.op_color_grade(ctx, clip, profile.edit.color_grade.look).outputs["path"]
-            if profile.edit.captions.enabled:
+            if profile.edit.captions.enabled and profile.edit.captions.source == "transcribe":
                 clip = build.op_captions(
                     ctx, clip, style=profile.edit.captions.style,
                     lang=profile.edit.captions.lang,
                 ).outputs["path"]
             clips.append(clip)
         draft = build.op_render(ctx, clips, name="draft").outputs["draft"]
+
+        # ---- AI overlay captions (Claude sees the scene + writes rider-voice lines) ----
+        caps = profile.edit.captions
+        if caps.enabled and caps.source == "ai":
+            ledger.update_run(run_id, "captioning")
+            frames = caption.op_extract_keyframes(
+                ctx, draft, n=caps.keyframes).outputs["frames"]
+            lines = caption.op_ai_captions(
+                ctx, frames, caps.themes, count=caps.count).outputs["lines"]
+            dur = ingest.op_probe(ctx, draft).outputs["media"].duration_s or 1.0
+            per = dur / max(1, len(lines))
+            scenes = [{"text": ln, "seconds": per} for ln in lines]
+            draft = build.op_captions_from_script(
+                ctx, draft, scenes, style=caps.style).outputs["path"]
+
+        # ---- music bed (fal Stable Audio) mixed UNDER the ride audio ----
+        mus = profile.edit.music
+        if mus.enabled:
+            ledger.update_run(run_id, "scoring")
+            dur = ingest.op_probe(ctx, draft).outputs["media"].duration_s or 1.0
+            fal_key = os.environ.get("FAL_KEY")
+            use_fal = mus.source == "fal" and bool(fal_key)
+            m = G.op_gen_music(
+                ctx, mus.mood or "reflective", dur,
+                provider="fal" if use_fal else None,
+                dry_run=not use_fal,
+                creds={"api_key": fal_key} if use_fal else None,
+            ).outputs["audio"]
+            draft = build.op_add_music_bed(
+                ctx, draft, m, music_gain=mus.gain,
+                source_gain=mus.duck_original).outputs["path"]
 
         # ---- review gate ----
         ledger.update_run(run_id, "review")
