@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 captions = ["faster-whisper"]     # optional: Whisper transcription for burned-in captions
+youtube = ["google-api-python-client", "google-auth-oauthlib", "google-auth-httplib2"]  # trend research, OAuth minting, uploads
 dev = ["pytest"]
 
 [project.scripts]
