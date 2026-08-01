@@ -3,8 +3,8 @@
 id: bike_pov
 niche: "mountain & city cycling POV"
 channel:
-  youtube: "@YourBikeCh"
-  instagram: "yourbike.ig"       # must be a Business account for API publishing
+  youtube: "@itsrocketriderdude"
+  instagram: "rocketriderdude"    # must be a Business account for API publishing
 
 audience:
   intent: [entertain, inspire]   # Axis A
