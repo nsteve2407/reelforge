@@ -69,7 +69,9 @@ class FalGenerator:
 
     def music(self, out, *, mood, seconds) -> GenResult:
         model = self.creds.get("music_model", "fal-ai/stable-audio")
-        self._run(model, {"prompt": f"{mood} instrumental",
+        prompt = (f"{mood}. Instrumental, no vocals, catchy and dynamic, "
+                  f"clean stereo mix, studio quality, seamless.")
+        self._run(model, {"prompt": prompt,
                           "seconds_total": int(round(seconds))}, str(out))
         return GenResult(str(out), seconds, "music", self.provider, dry_run=False,
                          message=f"fal {model}")

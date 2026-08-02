@@ -39,7 +39,7 @@ edit:
   captions:
     enabled: true
     source: ai                   # Claude 'sees' the scene + writes rider-voice overlay lines
-    style: reflective_center     # centered, clean overlay
+    style: clean_bottom          # polished sans + subtle bar, lower third
     count: 4
     keyframes: 3                 # frames sent to Claude vision
     themes: [biker life, relationships, faith, inner peace, self improvement, gratitude]
@@ -49,9 +49,9 @@ edit:
   music:
     enabled: true
     source: fal                  # fal.ai Stable Audio bed under the ride audio
-    mood: warm reflective lofi cinematic
-    gain: 0.85
-    duck_original: 0.22
+    mood: "upbeat indie folk-pop, acoustic guitar, hand claps, punchy drums, warm bass, feel-good and hopeful, around 115 BPM"
+    gain: 0.30                   # music sits UNDER the ride so engine noise comes through
+    duck_original: 1.0           # keep original bike audio full; loudnorm balances the mix
   voiceover:
     enabled: false
 

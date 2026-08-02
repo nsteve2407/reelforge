@@ -120,22 +120,24 @@ def _ts(t: float) -> str:
 def build_ass(captions: list[Caption], style: str = "karaoke_bold",
               play_w: int = 1080, play_h: int = 1920) -> str:
     """Return valid ASS subtitle text for the given cues. Pure/testable."""
-    bold = 1 if "bold" in style else 0
-    centered = "center" in style
-    fontsize = int(play_h * (0.042 if centered else 0.050))   # smaller -> fits width
-    align = 5 if centered else 2            # ASS: 5=middle-center, 2=bottom-center
-    margin_lr = int(play_w * 0.10)          # ~108px side margins so text never touches edges
-    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.12)
+    bold = 0 if "thin" in style else 1
+    centered = "center" in style          # default is bottom (research: lower third)
+    fontsize = int(play_h * (0.044 if centered else 0.040))   # ~77-85px on 1080x1920
+    align = 5 if centered else 2           # ASS: 5=middle-center, 2=bottom-center
+    margin_lr = int(play_w * 0.09)         # side safe margins so wrapped text never clips
+    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.11)  # bottom = lower third
+    # BorderStyle 3 = filled box behind text (semi-transparent black); best contrast per research.
+    box_colour = "&H55000000"              # ~66% opaque black bar (visible on any bg)
     header = (
         "[Script Info]\n"
         "ScriptType: v4.00+\n"
         f"PlayResX: {play_w}\nPlayResY: {play_h}\n"
-        "WrapStyle: 0\n\n"                   # 0 = smart word-wrapping (was 2 = no wrap -> overflow)
+        "WrapStyle: 0\n\n"                  # 0 = smart word-wrapping
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n"
-        f"Style: Default,Arial,{fontsize},&H00FFFFFF,&H00000000,&H64000000,"
-        f"{bold},1,3,1,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
+        f"Style: Default,DejaVu Sans,{fontsize},&H00FFFFFF,{box_colour},&H00000000,"
+        f"{bold},3,10,0,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
@@ -274,19 +276,26 @@ def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
 def op_add_music_bed(ctx: OpContext, video: str, music: str, *,
                      music_gain: float = 0.8, source_gain: float = 0.25,
                      name: str = "scored") -> OpResult:
-    """Mix a music bed UNDER the clip's original audio (ducked). One job: score it."""
+    """Mix a music bed UNDER the clip's original audio. One job: score it.
+
+    Uses amix with normalize disabled so the ratio is literal (source stays
+    prominent, e.g. source 1.0 / music 0.3), then loudnorm brings the mix to a
+    consistent, audible level (~-14 LUFS). If the clip has no audio, the music
+    plays at its gain.
+    """
     out = ctx.storage.path("build", f"{name}.mp4")
     out.parent.mkdir(parents=True, exist_ok=True)
     has_audio = media.probe(video).has_audio
     if has_audio:
         fc = (f"[0:a]volume={source_gain}[a0];[1:a]volume={music_gain}[a1];"
-              f"[a0][a1]amix=inputs=2:duration=first[a]")
+              f"[a0][a1]amix=inputs=2:duration=first:normalize=0[mx];"
+              f"[mx]loudnorm=I=-14:TP=-1.5:LRA=11[a]")
     else:
-        fc = f"[1:a]volume={music_gain}[a]"
+        fc = f"[1:a]volume={music_gain},loudnorm=I=-14:TP=-1.5[a]"
     media.run([
         "ffmpeg", "-y", "-i", str(video), "-i", str(music),
         "-filter_complex", fc, "-map", "0:v:0", "-map", "[a]",
         "-c:v", "copy", "-c:a", "aac", "-shortest", str(out),
     ])
     return OpResult(outputs={"path": str(out)}, artifacts={"scored": str(out)},
-                    message=f"music bed mixed (music={music_gain}, orig={source_gain})")
+                    message=f"music bed mixed (music={music_gain}, orig={source_gain}, loudnorm -14 LUFS)")

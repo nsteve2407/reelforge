@@ -58,17 +58,25 @@ def _fallback_lines(themes: list[str], count: int) -> list[str]:
 
 
 def _build_prompt(themes: list[str], count: int, trend: str | None) -> str:
-    theme_str = ", ".join(themes) if themes else "biker life, peace, gratitude"
+    theme_str = ", ".join(themes) if themes else "biker life, gratitude, freedom"
     p = (
-        "These frames are from a first-person POV cycling/biker short video. "
-        "Look at the scene (setting, light, mood, motion). Then write exactly "
-        f"{count} short overlay captions for the video, in a calm, reflective rider "
-        f"voice. Draw on these themes: {theme_str}. "
-        "Each line <= 8 words, evocative, no hashtags, no numbering, no quotes. "
-        "One caption per line."
+        "You're a rider writing short text overlays for a first-person POV cycling "
+        "Short. Look at these frames — the setting, light, mood, and motion — and "
+        f"write exactly {count} captions that read like real thoughts you'd have on "
+        "this ride.\n\n"
+        "Voice: casual, warm, a little playful — like texting a friend, NOT a "
+        "motivational poster. Avoid clichés, corny lines, and anything preachy.\n"
+        "Make the set COHERENT: the lines should flow together like one small moment "
+        f"across the ride (a beginning, a middle, a payoff). Loosely inspired by these "
+        f"vibes (don't force every one, don't name them literally): {theme_str}.\n"
+        "Vary the feel across the lines — mix one relatable/funny, one light and "
+        "grateful, one that lands with a little meaning.\n\n"
+        "Rules: 3-7 words each; simple everyday words; no hashtags, no emojis, no "
+        "quotes, no numbering, no ending punctuation. Return ONE caption per line, "
+        f"{count} lines, nothing else."
     )
     if trend:
-        p += f" You may subtly nod to this trend if it fits: {trend}."
+        p += f"\nIf it fits naturally, you may nod to what's trending: {trend}."
     return p
 
 
