@@ -73,6 +73,9 @@ class Captions(_Base):
     count: int = 4               # how many AI overlay lines
     keyframes: int = 3           # frames sent to Claude vision to describe the scene
     themes: list[str] = Field(default_factory=list)
+    font: str = "Poppins SemiBold"   # any installed family (e.g. Bebas Neue, Anton, Montserrat)
+    uppercase: bool = False          # ALL CAPS overlay
+    size_pct: float = 0.040          # font height as fraction of video height (~77px @1920)
 
 
 class ColorGrade(_Base):

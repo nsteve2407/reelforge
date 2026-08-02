@@ -43,6 +43,9 @@ edit:
     count: 4
     keyframes: 3                 # frames sent to Claude vision
     themes: [biker life, relationships, faith, inner peace, self improvement, gratitude]
+    font: "Bebas Neue"          # aesthetic cinematic all-caps caption font
+    uppercase: true
+    size_pct: 0.058             # bigger (~111px @1920)
   color_grade:
     lut: teal_orange_punch
     look: vivid_action
@@ -50,8 +53,8 @@ edit:
     enabled: true
     source: fal                  # fal.ai Stable Audio bed under the ride audio
     mood: "upbeat indie folk-pop, acoustic guitar, hand claps, punchy drums, warm bass, feel-good and hopeful, around 115 BPM"
-    source_lufs: -14            # engine leads (louder)
-    music_lufs: -20            # music ~6 LUFS under the engine: present but not overpowering
+    source_lufs: -18            # engine softer (sits under the music)
+    music_lufs: -13            # music louder / leads the mix
   voiceover:
     enabled: false
 

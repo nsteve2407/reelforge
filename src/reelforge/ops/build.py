@@ -118,14 +118,16 @@ def _ts(t: float) -> str:
 
 
 def build_ass(captions: list[Caption], style: str = "karaoke_bold",
-              play_w: int = 1080, play_h: int = 1920) -> str:
+              play_w: int = 1080, play_h: int = 1920, *,
+              font: str = "Poppins SemiBold", uppercase: bool = False,
+              size_pct: float = 0.0) -> str:
     """Return valid ASS subtitle text for the given cues. Pure/testable."""
-    bold = 0 if "thin" in style else 1
     centered = "center" in style          # default is bottom (research: lower third)
-    fontsize = int(play_h * (0.044 if centered else 0.040))   # ~77-85px on 1080x1920
+    default_pct = 0.044 if centered else 0.040
+    fontsize = int(play_h * (size_pct if size_pct else default_pct))
     align = 5 if centered else 2           # ASS: 5=middle-center, 2=bottom-center
-    margin_lr = int(play_w * 0.09)         # side safe margins so wrapped text never clips
-    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.11)  # bottom = lower third
+    margin_lr = int(play_w * 0.08)         # side safe margins so wrapped text never clips
+    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.10)  # bottom = lower third
     # BorderStyle 3 = filled box behind text (semi-transparent black); best contrast per research.
     box_colour = "&H55000000"              # ~66% opaque black bar (visible on any bg)
     header = (
@@ -136,14 +138,14 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n"
-        f"Style: Default,Poppins SemiBold,{fontsize},&H00FFFFFF,{box_colour},&H00000000,"
-        f"0,3,10,0,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
+        f"Style: Default,{font},{fontsize},&H00FFFFFF,{box_colour},&H00000000,"
+        f"0,3,12,0,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
     lines = []
     for c in captions:
-        text = c.text.replace("\n", "\\N")
+        text = (c.text.upper() if uppercase else c.text).replace("\n", "\\N")
         lines.append(f"Dialogue: 0,{_ts(c.start_s)},{_ts(c.end_s)},Default,,0,0,0,,{text}")
     return header + "\n".join(lines) + ("\n" if lines else "")
 
@@ -244,7 +246,9 @@ def op_mux_audio(ctx: OpContext, video: str, tracks: list[dict],
 
 @op("captions_from_script")
 def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
-                            style: str = "singalong_lyrics") -> OpResult:
+                            style: str = "singalong_lyrics", *,
+                            font: str = "Poppins SemiBold", uppercase: bool = False,
+                            size_pct: float = 0.0) -> OpResult:
     """Burn captions from known scene text+timings (no transcriber). One job: captions."""
     caps: list[Caption] = []
     t = 0.0
@@ -253,7 +257,8 @@ def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
         caps.append(Caption(t, t + dur, str(s.get("text", "")).strip()))
         t += dur
     info = media.probe(video)
-    ass = build_ass(caps, style, info.width, info.height)
+    ass = build_ass(caps, style, info.width, info.height,
+                    font=font, uppercase=uppercase, size_pct=size_pct)
     ass_path = ctx.storage.write_text(ass, "build", "script_captions.ass")
     out = ctx.storage.path("build", f"{Path(video).stem}_cap.mp4")
     out.parent.mkdir(parents=True, exist_ok=True)

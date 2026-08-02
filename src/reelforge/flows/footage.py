@@ -133,7 +133,8 @@ def run_footage(
             per = dur / max(1, len(lines))
             scenes = [{"text": ln, "seconds": per} for ln in lines]
             draft = build.op_captions_from_script(
-                ctx, draft, scenes, style=caps.style).outputs["path"]
+                ctx, draft, scenes, style=caps.style, font=caps.font,
+                uppercase=caps.uppercase, size_pct=caps.size_pct).outputs["path"]
 
         # ---- music bed (fal Stable Audio) mixed UNDER the ride audio ----
         mus = profile.edit.music
