@@ -43,6 +43,7 @@ edit:
     count: 4
     keyframes: 3                 # frames sent to Claude vision
     themes: [biker life, relationships, faith, inner peace, self improvement, gratitude]
+    vibe: reflective             # default mood; override per clip with `--vibe <name>`
     font: "Bebas Neue"          # aesthetic cinematic all-caps caption font
     uppercase: true
     size_pct: 0.058             # bigger (~111px @1920)
@@ -69,3 +70,55 @@ publish:
 
 budget:
   max_usd_per_video: 0.50
+
+# ---- Vibe library --------------------------------------------------------
+# Pick one per clip (profile default above, or `reelforge run --vibe <name>`).
+# Each vibe steers Claude's caption themes + trending keywords, the fal music
+# prompt, and the hashtags — so the words and the music match the clip's mood.
+# Themes/keywords/tags are grounded in 2026 moto/bike short-form trend research.
+vibes:
+  reflective:                    # "the only therapy I need is the open road"
+    themes: [inner peace, clarity, letting go, gratitude, mental therapy, self improvement]
+    keywords: [therapy, wind in my face, open road, quiet mind, clear head]
+    music_mood: "warm mellow lofi, soft acoustic guitar, gentle keys, calm and reflective, around 80 BPM"
+    hashtags: ["#Shorts", "#bikelife", "#motovlog", "#ride", "#mentalhealth"]
+  freedom:                       # open-road / adventure / escape
+    themes: [freedom, open road, adventure, escape, chasing the horizon]
+    keywords: [freedom, open road, sunset ride, horizon, no limits]
+    music_mood: "uplifting indie folk-pop, acoustic guitar, warm bass, hopeful and free, around 115 BPM"
+    hashtags: ["#Shorts", "#bikelife", "#freedom", "#adventure", "#sunsetride"]
+  adrenaline:                    # send it / speed / no fear
+    themes: [adrenaline, speed, sending it, no fear, feeling alive]
+    keywords: [throttle, send it, redline, adrenaline, full send]
+    music_mood: "high-energy electronic rock, driving drums, aggressive synth bass, intense, around 140 BPM"
+    hashtags: ["#Shorts", "#motorcycle", "#sendit", "#adrenaline", "#superbike"]
+  soul:                          # "two wheels move the soul"
+    themes: [passion, soul, born to ride, one with the machine, the ride is life]
+    keywords: [two wheels, born to ride, soul, one with the machine]
+    music_mood: "cinematic rock, electric guitar, epic building drums, powerful and emotional, around 120 BPM"
+    hashtags: ["#Shorts", "#twowheels", "#borntoride", "#bikelife", "#rider"]
+  faith:                         # gratitude / grace / purpose
+    themes: [faith, gratitude, blessings, grace, purpose, trust]
+    keywords: [grateful, blessed, faith, grace, thankful]
+    music_mood: "warm uplifting acoustic, gentle piano, hopeful strings, spiritual and grateful, around 90 BPM"
+    hashtags: ["#Shorts", "#blessed", "#faith", "#gratitude", "#ride"]
+  brotherhood:                   # crew / ride-together / loyalty
+    themes: [brotherhood, crew, riding together, loyalty, found family]
+    keywords: [crew, ride or die, brotherhood, together, family]
+    music_mood: "feel-good indie anthem, group claps, warm guitars, energetic and communal, around 118 BPM"
+    hashtags: ["#Shorts", "#bikelife", "#brotherhood", "#ridetogether", "#motovlog"]
+  funny:                         # relatable rider humor
+    themes: [relatable rider humor, bike vs responsibilities, my therapist is my bike, one more mile]
+    keywords: [therapy, addicted, one more mile, born to ride forced to work]
+    music_mood: "playful upbeat pop, bouncy plucks, quirky and light, fun, around 120 BPM"
+    hashtags: ["#Shorts", "#bikelife", "#relatable", "#motovlog", "#funny"]
+  aesthetic:                     # cinematic chill / golden hour
+    themes: [aesthetic, cinematic, golden hour, slow living, present moment, stillness]
+    keywords: [golden hour, sunset, aesthetic, slow, cinematic]
+    music_mood: "dreamy chillwave, warm analog synth, mellow beat, atmospheric and cinematic, around 100 BPM"
+    hashtags: ["#Shorts", "#aesthetic", "#sunsetride", "#cinematic", "#bikelife"]
+  discipline:                    # self-improvement / grind / mindset
+    themes: [discipline, self improvement, consistency, becoming better, focus, mindset]
+    keywords: [discipline, grind, focus, get better, mindset]
+    music_mood: "motivational cinematic, building drums, determined piano, driving and focused, around 110 BPM"
+    hashtags: ["#Shorts", "#discipline", "#selfimprovement", "#mindset", "#motivation"]

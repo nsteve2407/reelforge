@@ -122,6 +122,7 @@ $V run --profile bike_pov --input ride.mp4            # footage (real)
 $V run --profile nursery_rhymes --topic "sleepy stars"# generative
 $V run --profile tv_series_talk --topic "finale" [--voice take.mp4]   # hybrid
 $V run --profile bike_pov --demo --auto-approve --publish             # publish (DRY-RUN)
+$V run --profile bike_pov --input ride.mp4 --vibe adrenaline           # pick a vibe (footage)
 $V publish --run <id> --profile bike_pov              # publish an approved run
 $V learn ingest --run <id> --hook hard_cut --views 5000 --watch 22 --length 28 --retention 0.75
 $V learn insights ; $V learn train                    # bandit ranking / retrain scorer
@@ -130,7 +131,7 @@ $V report --html dashboard.html                       # spend/quota/bandit/statu
 $V setup                                              # go-live credential checklist w/ status
 $V auth youtube --client-secrets cs.json --out yt_token.json   # mint YT OAuth token (interactive)
 ```
-Flags: `--live` (real APIs, needs creds), `--enforce-budget` (trim generative scenes to `budget.max_usd_per_video`).
+Flags: `--live` (real APIs, needs creds), `--enforce-budget` (trim generative scenes to `budget.max_usd_per_video`), `--vibe <name>` (footage: pick a mood from the profile's `vibes:` library — sets caption themes + trending keywords for Claude, the fal music prompt, and hashtags in one knob).
 
 Pipeline flow: ingest → understand (multi-signal fuse: scenes+audio+motion+telemetry → scipy peaks → soft-NMS) → build (cut→reframe 9:16→captions→LUT→render) → **review gate (stops here unless auto-approve)** → publish (quota-guarded). Generative/hybrid: script→scenes/voice/music→mux→captions→grade→review→publish.
 

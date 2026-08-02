@@ -52,6 +52,7 @@ def run_footage(
     publish: bool = False,
     dry_run: bool = True,
     creds: dict | None = None,
+    vibe: Optional[str] = None,
 ) -> dict:
     if profile.source.mode is SourceMode.generative:
         raise ValueError(
@@ -121,14 +122,22 @@ def run_footage(
             clips.append(clip)
         draft = build.op_render(ctx, clips, name="draft").outputs["draft"]
 
-        # ---- AI overlay captions (Claude sees the scene + writes rider-voice lines) ----
+        # ---- resolve the selected vibe (captions + music + tags stay coherent) ----
         caps = profile.edit.captions
+        _vname = vibe or caps.vibe
+        _vibe = profile.vibes.get(_vname) if _vname else None
+        _themes = _vibe.themes if (_vibe and _vibe.themes) else caps.themes
+        _kw = ", ".join(_vibe.keywords) if (_vibe and _vibe.keywords) else None
+        if _vibe and _vibe.hashtags:
+            profile.publish.hashtags = _vibe.hashtags
+
+        # ---- AI overlay captions (Claude sees the scene + writes rider-voice lines) ----
         if caps.enabled and caps.source == "ai":
             ledger.update_run(run_id, "captioning")
             frames = caption.op_extract_keyframes(
                 ctx, draft, n=caps.keyframes).outputs["frames"]
             lines = caption.op_ai_captions(
-                ctx, frames, caps.themes, count=caps.count).outputs["lines"]
+                ctx, frames, _themes, count=caps.count, trend=_kw).outputs["lines"]
             dur = ingest.op_probe(ctx, draft).outputs["media"].duration_s or 1.0
             per = dur / max(1, len(lines))
             scenes = [{"text": ln, "seconds": per} for ln in lines]
@@ -144,7 +153,7 @@ def run_footage(
             fal_key = os.environ.get("FAL_KEY")
             use_fal = mus.source == "fal" and bool(fal_key)
             m = G.op_gen_music(
-                ctx, mus.mood or "reflective", dur,
+                ctx, (_vibe.music_mood if _vibe and _vibe.music_mood else (mus.mood or "reflective")), dur,
                 provider="fal" if use_fal else None,
                 dry_run=not use_fal,
                 creds={"api_key": fal_key} if use_fal else None,

@@ -73,6 +73,7 @@ class Captions(_Base):
     count: int = 4               # how many AI overlay lines
     keyframes: int = 3           # frames sent to Claude vision to describe the scene
     themes: list[str] = Field(default_factory=list)
+    vibe: Optional[str] = None   # pick a named vibe from profile.vibes (overrides themes)
     font: str = "Poppins SemiBold"   # any installed family (e.g. Bebas Neue, Anton, Montserrat)
     uppercase: bool = False          # ALL CAPS overlay
     size_pct: float = 0.040          # font height as fraction of video height (~77px @1920)
@@ -153,6 +154,15 @@ class Generate(_Base):
     broll: dict = Field(default_factory=dict)
 
 
+class Vibe(_Base):
+    """A selectable mood for a clip: drives caption themes, trending keywords,
+    the fal music prompt, and hashtags - so captions and music stay coherent."""
+    themes: list[str] = Field(default_factory=list)      # what Claude leans into
+    keywords: list[str] = Field(default_factory=list)    # trending words to weave in
+    music_mood: str = ""                                 # fal Stable Audio prompt
+    hashtags: list[str] = Field(default_factory=list)    # publish tags for this vibe
+
+
 class ContentProfile(_Base):
     id: str
     niche: str = ""
@@ -165,6 +175,7 @@ class ContentProfile(_Base):
     generate: Generate = Field(default_factory=Generate)
     publish: Publish = Field(default_factory=Publish)
     budget: Budget = Field(default_factory=Budget)
+    vibes: dict[str, Vibe] = Field(default_factory=dict)  # named moods, picked per clip
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "ContentProfile":

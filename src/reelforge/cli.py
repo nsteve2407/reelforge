@@ -79,6 +79,7 @@ def run(
     input: Optional[str] = typer.Option(None, help="input video path (footage mode)"),
     topic: Optional[str] = typer.Option(None, help="topic/brief (generative/hybrid mode)"),
     voice: Optional[str] = typer.Option(None, help="narration audio/video (hybrid mode)"),
+    vibe: Optional[str] = typer.Option(None, help="pick a named vibe from the profile (footage mode)"),
     demo: bool = typer.Option(False, help="synthesize a test clip (footage mode)"),
     profiles_dir: str = typer.Option("profiles", help="profiles directory"),
     work: str = typer.Option(".rf_work", help="working directory"),
@@ -124,7 +125,7 @@ def run(
             typer.echo(f"input not found: {src}"); raise typer.Exit(code=1)
         typer.echo(f"running profile '{prof.id}' on {src}")
         result = run_footage(src, prof, work_root=work, auto_approve=auto_approve,
-                             publish=publish, dry_run=not live, creds=creds)
+                             publish=publish, dry_run=not live, creds=creds, vibe=vibe)
     typer.echo("")
     for k, v in result.items():
         typer.echo(f"  {k:14} {v}")
