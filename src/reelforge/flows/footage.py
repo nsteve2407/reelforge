@@ -149,8 +149,8 @@ def run_footage(
                 creds={"api_key": fal_key} if use_fal else None,
             ).outputs["audio"]
             draft = build.op_add_music_bed(
-                ctx, draft, m, music_gain=mus.gain,
-                source_gain=mus.duck_original).outputs["path"]
+                ctx, draft, m, source_lufs=mus.source_lufs,
+                music_lufs=mus.music_lufs).outputs["path"]
 
         # ---- review gate ----
         ledger.update_run(run_id, "review")

@@ -53,7 +53,7 @@ def test_build_ass_centered_vs_bottom():
 def test_add_music_bed_keeps_audio(ctx, sample_clip):
     clip = build.op_cut(ctx, sample_clip, Segment(0.0, 4.0), name="c").outputs["clip"]
     musicf = G.op_gen_music(ctx, "reflective", 4.0).outputs["audio"]  # dry-run sine
-    res = build.op_add_music_bed(ctx, clip, musicf, music_gain=0.8, source_gain=0.25)
+    res = build.op_add_music_bed(ctx, clip, musicf, source_lufs=-14, music_lufs=-20)
     info = media.probe(res.outputs["path"])
     assert info.has_audio and info.duration_s > 0
 

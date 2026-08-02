@@ -50,8 +50,8 @@ edit:
     enabled: true
     source: fal                  # fal.ai Stable Audio bed under the ride audio
     mood: "upbeat indie folk-pop, acoustic guitar, hand claps, punchy drums, warm bass, feel-good and hopeful, around 115 BPM"
-    gain: 0.30                   # music sits UNDER the ride so engine noise comes through
-    duck_original: 1.0           # keep original bike audio full; loudnorm balances the mix
+    source_lufs: -14            # engine leads (louder)
+    music_lufs: -20            # music ~6 LUFS under the engine: present but not overpowering
   voiceover:
     enabled: false
 

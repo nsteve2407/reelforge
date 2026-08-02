@@ -84,8 +84,9 @@ class Music(_Base):
     enabled: bool = False
     source: Optional[str] = None   # fal | local | none
     mood: Optional[str] = None
-    gain: float = 0.8              # music bed volume
-    duck_original: float = 0.25    # original clip audio volume under the music
+    # Loudness targets (LUFS) so the blend is consistent regardless of track levels.
+    source_lufs: float = -14.0     # original clip (engine) — louder, leading layer
+    music_lufs: float = -20.0      # music bed — normalized to sit under the original
 
 
 class Voiceover(_Base):

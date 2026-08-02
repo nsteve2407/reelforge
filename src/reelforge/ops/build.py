@@ -136,8 +136,8 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n"
-        f"Style: Default,DejaVu Sans,{fontsize},&H00FFFFFF,{box_colour},&H00000000,"
-        f"{bold},3,10,0,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
+        f"Style: Default,Poppins SemiBold,{fontsize},&H00FFFFFF,{box_colour},&H00000000,"
+        f"0,3,10,0,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
@@ -274,28 +274,29 @@ def op_captions_from_script(ctx: OpContext, video: str, scenes: list[dict],
 
 @op("add_music_bed")
 def op_add_music_bed(ctx: OpContext, video: str, music: str, *,
-                     music_gain: float = 0.8, source_gain: float = 0.25,
+                     source_lufs: float = -14.0, music_lufs: float = -20.0,
                      name: str = "scored") -> OpResult:
     """Mix a music bed UNDER the clip's original audio. One job: score it.
 
-    Uses amix with normalize disabled so the ratio is literal (source stays
-    prominent, e.g. source 1.0 / music 0.3), then loudnorm brings the mix to a
-    consistent, audible level (~-14 LUFS). If the clip has no audio, the music
-    plays at its gain.
+    Each stem is loudness-normalized to its own LUFS target BEFORE mixing, so the
+    blend is consistent no matter how loud/quiet the generated track is: the
+    original (engine) leads at `source_lufs`, the music sits `music_lufs` beneath
+    it, then the mix is normalized to a broadcast level (~-14 LUFS).
     """
     out = ctx.storage.path("build", f"{name}.mp4")
     out.parent.mkdir(parents=True, exist_ok=True)
     has_audio = media.probe(video).has_audio
     if has_audio:
-        fc = (f"[0:a]volume={source_gain}[a0];[1:a]volume={music_gain}[a1];"
-              f"[a0][a1]amix=inputs=2:duration=first:normalize=0[mx];"
-              f"[mx]loudnorm=I=-14:TP=-1.5:LRA=11[a]")
+        fc = (f"[0:a]loudnorm=I={source_lufs}:TP=-1.5[e];"
+              f"[1:a]loudnorm=I={music_lufs}:TP=-2.0[m];"
+              f"[e][m]amix=inputs=2:duration=first:normalize=0[mx];"
+              f"[mx]loudnorm=I=-14:TP=-1.5[a]")
     else:
-        fc = f"[1:a]volume={music_gain},loudnorm=I=-14:TP=-1.5[a]"
+        fc = f"[1:a]loudnorm=I=-14:TP=-1.5[a]"
     media.run([
         "ffmpeg", "-y", "-i", str(video), "-i", str(music),
         "-filter_complex", fc, "-map", "0:v:0", "-map", "[a]",
         "-c:v", "copy", "-c:a", "aac", "-shortest", str(out),
     ])
     return OpResult(outputs={"path": str(out)}, artifacts={"scored": str(out)},
-                    message=f"music bed mixed (music={music_gain}, orig={source_gain}, loudnorm -14 LUFS)")
+                    message=f"scored: engine {source_lufs} LUFS + music {music_lufs} LUFS -> -14 LUFS")
