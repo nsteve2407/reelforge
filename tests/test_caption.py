@@ -42,8 +42,9 @@ def test_build_ass_centered_vs_bottom():
     caps = [Caption(0.0, 2.0, "ride on")]
     centered = build.build_ass(caps, "reflective_center", 1080, 1920)
     bottom = build.build_ass(caps, "karaoke_bold", 1080, 1920)
-    assert ",5,60,60,0" in centered           # ASS middle-center alignment
-    assert ",2,60,60," in bottom               # bottom-center alignment
+    assert "WrapStyle: 0" in centered          # word-wrap on (was 2 = overflow)
+    assert ",5," in centered                   # ASS middle-center alignment
+    assert ",2," in bottom                     # bottom-center alignment
     assert "ride on" in centered
 
 

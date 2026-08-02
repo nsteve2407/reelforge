@@ -122,19 +122,20 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
     """Return valid ASS subtitle text for the given cues. Pure/testable."""
     bold = 1 if "bold" in style else 0
     centered = "center" in style
-    fontsize = int(play_h * (0.050 if centered else 0.055))
+    fontsize = int(play_h * (0.042 if centered else 0.050))   # smaller -> fits width
     align = 5 if centered else 2            # ASS: 5=middle-center, 2=bottom-center
-    margin_v = 0 if centered else int(play_h * 0.10)
+    margin_lr = int(play_w * 0.10)          # ~108px side margins so text never touches edges
+    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.12)
     header = (
         "[Script Info]\n"
         "ScriptType: v4.00+\n"
         f"PlayResX: {play_w}\nPlayResY: {play_h}\n"
-        "WrapStyle: 2\n\n"
+        "WrapStyle: 0\n\n"                   # 0 = smart word-wrapping (was 2 = no wrap -> overflow)
         "[V4+ Styles]\n"
         "Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, "
         "Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n"
         f"Style: Default,Arial,{fontsize},&H00FFFFFF,&H00000000,&H64000000,"
-        f"{bold},1,3,1,{align},60,60,{margin_v}\n\n"
+        f"{bold},1,3,1,{align},{margin_lr},{margin_lr},{margin_v}\n\n"
         "[Events]\n"
         "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
