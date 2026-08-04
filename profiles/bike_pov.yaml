@@ -82,43 +82,61 @@ vibes:
     keywords: [therapy, wind in my face, open road, quiet mind, clear head]
     music_mood: "warm mellow lofi, soft acoustic guitar, gentle keys, calm and reflective, around 80 BPM"
     hashtags: ["#Shorts", "#bikelife", "#motovlog", "#ride", "#mentalhealth"]
+    font: "Bebas Neue"
+    look: warm_storybook
   freedom:                       # open-road / adventure / escape
     themes: [freedom, open road, adventure, escape, chasing the horizon]
     keywords: [freedom, open road, sunset ride, horizon, no limits]
     music_mood: "uplifting indie folk-pop, acoustic guitar, warm bass, hopeful and free, around 115 BPM"
     hashtags: ["#Shorts", "#bikelife", "#freedom", "#adventure", "#sunsetride"]
+    font: "Bebas Neue"
+    look: golden_hour
   adrenaline:                    # send it / speed / no fear
     themes: [adrenaline, speed, sending it, no fear, feeling alive]
     keywords: [throttle, send it, redline, adrenaline, full send]
     music_mood: "high-energy electronic rock, driving drums, aggressive synth bass, intense, around 140 BPM"
     hashtags: ["#Shorts", "#motorcycle", "#sendit", "#adrenaline", "#superbike"]
+    font: "Anton"
+    look: vivid_action
   soul:                          # "two wheels move the soul"
     themes: [passion, soul, born to ride, one with the machine, the ride is life]
     keywords: [two wheels, born to ride, soul, one with the machine]
     music_mood: "cinematic rock, electric guitar, epic building drums, powerful and emotional, around 120 BPM"
     hashtags: ["#Shorts", "#twowheels", "#borntoride", "#bikelife", "#rider"]
+    font: "Anton"
+    look: moody_contrast
   faith:                         # gratitude / grace / purpose
     themes: [faith, gratitude, blessings, grace, purpose, trust]
     keywords: [grateful, blessed, faith, grace, thankful]
     music_mood: "warm uplifting acoustic, gentle piano, hopeful strings, spiritual and grateful, around 90 BPM"
     hashtags: ["#Shorts", "#blessed", "#faith", "#gratitude", "#ride"]
+    font: "Montserrat"
+    look: warm_storybook
   brotherhood:                   # crew / ride-together / loyalty
     themes: [brotherhood, crew, riding together, loyalty, found family]
     keywords: [crew, ride or die, brotherhood, together, family]
     music_mood: "feel-good indie anthem, group claps, warm guitars, energetic and communal, around 118 BPM"
     hashtags: ["#Shorts", "#bikelife", "#brotherhood", "#ridetogether", "#motovlog"]
+    font: "Oswald"
+    look: vivid_action
   funny:                         # relatable rider humor
     themes: [relatable rider humor, bike vs responsibilities, my therapist is my bike, one more mile]
     keywords: [therapy, addicted, one more mile, born to ride forced to work]
     music_mood: "playful upbeat pop, bouncy plucks, quirky and light, fun, around 120 BPM"
     hashtags: ["#Shorts", "#bikelife", "#relatable", "#motovlog", "#funny"]
+    font: "Montserrat"
+    look: clean_bright
   aesthetic:                     # cinematic chill / golden hour
     themes: [aesthetic, cinematic, golden hour, slow living, present moment, stillness]
     keywords: [golden hour, sunset, aesthetic, slow, cinematic]
     music_mood: "dreamy chillwave, warm analog synth, mellow beat, atmospheric and cinematic, around 100 BPM"
     hashtags: ["#Shorts", "#aesthetic", "#sunsetride", "#cinematic", "#bikelife"]
+    font: "Montserrat"
+    look: cinematic_teal
   discipline:                    # self-improvement / grind / mindset
     themes: [discipline, self improvement, consistency, becoming better, focus, mindset]
     keywords: [discipline, grind, focus, get better, mindset]
     music_mood: "motivational cinematic, building drums, determined piano, driving and focused, around 110 BPM"
     hashtags: ["#Shorts", "#discipline", "#selfimprovement", "#mindset", "#motivation"]
+    font: "Oswald"
+    look: moody_contrast

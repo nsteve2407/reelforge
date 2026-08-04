@@ -20,6 +20,9 @@ _LOOKS: dict[str, str] = {
     "vivid_action": "eq=saturation=1.35:contrast=1.12:brightness=0.02",
     "warm_storybook": "colorbalance=rm=0.10:gm=0.04:bm=-0.06,eq=saturation=1.10:brightness=0.03",
     "clean_bright": "eq=brightness=0.04:contrast=1.05:saturation=1.05",
+    "cinematic_teal": "colorbalance=bs=0.12:bh=-0.08,eq=saturation=0.95:contrast=1.12:brightness=-0.01",
+    "golden_hour": "colorbalance=rm=0.12:rh=0.08:bm=-0.08,eq=saturation=1.15:contrast=1.05:brightness=0.03",
+    "moody_contrast": "eq=saturation=0.90:contrast=1.22:brightness=-0.02",
     "none": "",
 }
 
@@ -127,7 +130,7 @@ def build_ass(captions: list[Caption], style: str = "karaoke_bold",
     fontsize = int(play_h * (size_pct if size_pct else default_pct))
     align = 5 if centered else 2           # ASS: 5=middle-center, 2=bottom-center
     margin_lr = int(play_w * 0.08)         # side safe margins so wrapped text never clips
-    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.10)  # bottom = lower third
+    margin_v = int(play_h * 0.06) if centered else int(play_h * 0.14)  # bottom, raised off the edge
     # BorderStyle 3 = filled box behind text (semi-transparent black); best contrast per research.
     box_colour = "&H55000000"              # ~66% opaque black bar (visible on any bg)
     header = (

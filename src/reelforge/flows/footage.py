@@ -105,6 +105,18 @@ def run_footage(
             ledger.update_run(run_id, "failed", {"reason": "no highlights"})
             return {"run_id": run_id, "status": "failed", "reason": "no highlights found"}
 
+        # ---- resolve the selected vibe (steers captions + look + music + tags) ----
+        caps = profile.edit.captions
+        _vname = vibe or caps.vibe
+        _vibe = profile.vibes.get(_vname) if _vname else None
+        _themes = _vibe.themes if (_vibe and _vibe.themes) else caps.themes
+        _kw = ", ".join(_vibe.keywords) if (_vibe and _vibe.keywords) else None
+        _font = _vibe.font if (_vibe and _vibe.font) else caps.font
+        if _vibe and _vibe.look:
+            profile.edit.color_grade.look = _vibe.look
+        if _vibe and _vibe.hashtags:
+            profile.publish.hashtags = _vibe.hashtags
+
         # ---- build: cut -> reframe -> grade -> captions ----
         ledger.update_run(run_id, "building")
         segments = build.op_select_clips(ctx, highlights, profile).outputs["segments"]
@@ -122,15 +134,6 @@ def run_footage(
             clips.append(clip)
         draft = build.op_render(ctx, clips, name="draft").outputs["draft"]
 
-        # ---- resolve the selected vibe (captions + music + tags stay coherent) ----
-        caps = profile.edit.captions
-        _vname = vibe or caps.vibe
-        _vibe = profile.vibes.get(_vname) if _vname else None
-        _themes = _vibe.themes if (_vibe and _vibe.themes) else caps.themes
-        _kw = ", ".join(_vibe.keywords) if (_vibe and _vibe.keywords) else None
-        if _vibe and _vibe.hashtags:
-            profile.publish.hashtags = _vibe.hashtags
-
         # ---- AI overlay captions (Claude sees the scene + writes rider-voice lines) ----
         if caps.enabled and caps.source == "ai":
             ledger.update_run(run_id, "captioning")
@@ -142,7 +145,7 @@ def run_footage(
             per = dur / max(1, len(lines))
             scenes = [{"text": ln, "seconds": per} for ln in lines]
             draft = build.op_captions_from_script(
-                ctx, draft, scenes, style=caps.style, font=caps.font,
+                ctx, draft, scenes, style=caps.style, font=_font,
                 uppercase=caps.uppercase, size_pct=caps.size_pct).outputs["path"]
 
         # ---- music bed (fal Stable Audio) mixed UNDER the ride audio ----

@@ -161,6 +161,8 @@ class Vibe(_Base):
     keywords: list[str] = Field(default_factory=list)    # trending words to weave in
     music_mood: str = ""                                 # fal Stable Audio prompt
     hashtags: list[str] = Field(default_factory=list)    # publish tags for this vibe
+    font: Optional[str] = None                           # caption font override for this vibe
+    look: Optional[str] = None                           # color-grade look override for this vibe
 
 
 class ContentProfile(_Base):

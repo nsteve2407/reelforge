@@ -131,7 +131,7 @@ $V report --html dashboard.html                       # spend/quota/bandit/statu
 $V setup                                              # go-live credential checklist w/ status
 $V auth youtube --client-secrets cs.json --out yt_token.json   # mint YT OAuth token (interactive)
 ```
-Flags: `--live` (real APIs, needs creds), `--enforce-budget` (trim generative scenes to `budget.max_usd_per_video`), `--vibe <name>` (footage: pick a mood from the profile's `vibes:` library — sets caption themes + trending keywords for Claude, the fal music prompt, and hashtags in one knob).
+Flags: `--live` (real APIs, needs creds), `--enforce-budget` (trim generative scenes to `budget.max_usd_per_video`), `--vibe <name>` (footage: pick a mood from the profile's `vibes:` library — one knob sets caption themes + trending keywords for Claude, the fal music prompt, the caption font + color-grade look, and the hashtags).
 
 Pipeline flow: ingest → understand (multi-signal fuse: scenes+audio+motion+telemetry → scipy peaks → soft-NMS) → build (cut→reframe 9:16→captions→LUT→render) → **review gate (stops here unless auto-approve)** → publish (quota-guarded). Generative/hybrid: script→scenes/voice/music→mux→captions→grade→review→publish.
 

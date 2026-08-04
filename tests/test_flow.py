@@ -62,6 +62,7 @@ def test_vibe_selection_drives_captions_and_tags(tmp_path, clip):
             "keywords": ["throttle", "redline"],
             "music_mood": "aggressive electronic rock, 140 BPM",
             "hashtags": ["#sendit", "#adrenaline"],
+            "look": "vivid_action",
         }
     }
     prof = ContentProfile(
@@ -78,6 +79,8 @@ def test_vibe_selection_drives_captions_and_tags(tmp_path, clip):
     assert res["status"] == "published"
     # the vibe's hashtags replaced the profile default for this run
     assert prof.publish.hashtags == ["#sendit", "#adrenaline"]
+    # the vibe's color-grade look was applied for this run
+    assert prof.edit.color_grade.look == "vivid_action"
 
 
 def test_unknown_vibe_falls_back(tmp_path, clip):
