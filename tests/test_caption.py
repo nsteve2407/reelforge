@@ -20,6 +20,17 @@ def test_fallback_lines_count():
     assert len(caption._fallback_lines([], 10)) == 10   # cycles if count > list
 
 
+def test_is_caption_rejects_preamble():
+    # the real 032 leak: Claude prefixed a meta line ending in ':'
+    assert not caption._is_caption(
+        "Looking at these frames, here are 4 cohesive captions:")
+    assert not caption._is_caption("Here are the captions")
+    assert not caption._is_caption("this line is far too long to be a punchy overlay caption for sure")
+    # genuine overlays pass
+    assert caption._is_caption("two wheels and everything makes sense")
+    assert caption._is_caption("this is what free feels like")
+
+
 def test_ai_captions_fallback_without_key(ctx, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     res = caption.op_ai_captions(ctx, frames=[], themes=["biker life", "faith"], count=3)

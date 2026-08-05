@@ -71,7 +71,9 @@ class FalGenerator:
         model = self.creds.get("music_model", "fal-ai/stable-audio")
         prompt = (f"{mood}. Instrumental, no vocals, catchy and dynamic, "
                   f"clean stereo mix, studio quality, seamless.")
-        self._run(model, {"prompt": prompt,
-                          "seconds_total": int(round(seconds))}, str(out))
+        # Stable Audio caps a single generation at 47s; the mixer loops/trims it
+        # to the clip length, so request at most the model max.
+        secs = max(1, min(47, int(round(seconds))))
+        self._run(model, {"prompt": prompt, "seconds_total": secs}, str(out))
         return GenResult(str(out), seconds, "music", self.provider, dry_run=False,
                          message=f"fal {model}")

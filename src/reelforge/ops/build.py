@@ -302,7 +302,7 @@ def op_add_music_bed(ctx: OpContext, video: str, music: str, *,
     else:
         fc = f"[1:a]loudnorm=I=-14:TP=-1.5[a]"
     media.run([
-        "ffmpeg", "-y", "-i", str(video), "-i", str(music),
+        "ffmpeg", "-y", "-i", str(video), "-stream_loop", "-1", "-i", str(music),
         "-filter_complex", fc, "-map", "0:v:0", "-map", "[a]",
         "-c:v", "copy", "-c:a", "aac", "-shortest", str(out),
     ])

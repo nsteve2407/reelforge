@@ -60,8 +60,9 @@ def _fallback_lines(themes: list[str], count: int) -> list[str]:
 def _build_prompt(themes: list[str], count: int, trend: str | None) -> str:
     theme_str = ", ".join(themes) if themes else "biker life, gratitude, freedom"
     p = (
-        "You're a rider writing short text overlays for a first-person POV cycling "
-        "Short. Look at these frames — the setting, light, mood, and motion — and "
+        "You're a rider writing short text overlays for a first-person POV riding "
+        "Short (motorcycle or bicycle — match what you actually see in the frames). "
+        "Look at these frames — the setting, light, mood, and motion — and "
         f"write exactly {count} captions that read like real thoughts you'd have on "
         "this ride.\n\n"
         "Voice: casual, warm, a little playful — like texting a friend, NOT a "
@@ -72,12 +73,27 @@ def _build_prompt(themes: list[str], count: int, trend: str | None) -> str:
         "Vary the feel across the lines — mix one relatable/funny, one light and "
         "grateful, one that lands with a little meaning.\n\n"
         "Rules: 3-7 words each; simple everyday words; no hashtags, no emojis, no "
-        "quotes, no numbering, no ending punctuation. Return ONE caption per line, "
-        f"{count} lines, nothing else."
+        "quotes, no numbering, no ending punctuation. Output ONLY the caption lines "
+        f"— exactly {count} of them, one per line, with NO preamble, intro, header, "
+        "or explanation (never write things like 'Here are' or 'Looking at')."
     )
     if trend:
         p += f"\nIf it fits naturally, you may nod to what's trending: {trend}."
     return p
+
+
+_META = ("here are", "here's", "caption", "looking at", "these frames",
+         "cohesive", "coherent", "i'll", "sure,", "note:", "overlay", "first-person")
+
+
+def _is_caption(ln: str) -> bool:
+    """Reject model preamble/meta lines; keep only plausible short overlays."""
+    low = ln.lower()
+    if not ln or ln.rstrip().endswith(":"):
+        return False
+    if len(ln.split()) > 12:
+        return False
+    return not any(m in low for m in _META)
 
 
 def _claude_lines(frames: list[str], themes: list[str], count: int,
@@ -94,8 +110,8 @@ def _claude_lines(frames: list[str], themes: list[str], count: int,
     msg = client.messages.create(model=_MODEL, max_tokens=300,
                                  messages=[{"role": "user", "content": content}])
     text = "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
-    lines = [ln.strip("-•*0123456789. \t\"'") for ln in text.splitlines() if ln.strip()]
-    lines = [ln for ln in lines if ln][:count]
+    raw = [ln.strip("-•*0123456789. \t\"'") for ln in text.splitlines() if ln.strip()]
+    lines = [ln for ln in raw if _is_caption(ln)][:count]
     usage = {"in": msg.usage.input_tokens, "out": msg.usage.output_tokens}
     return lines, usage
 
