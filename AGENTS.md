@@ -135,6 +135,8 @@ Flags: `--live` (real APIs, needs creds), `--enforce-budget` (trim generative sc
 
 Pipeline flow: ingest → understand (multi-signal fuse: scenes+audio+motion+telemetry → scipy peaks → soft-NMS) → build (cut→reframe 9:16→captions→LUT→render) → **review gate (stops here unless auto-approve)** → publish (quota-guarded). Generative/hybrid: script→scenes/voice/music→mux→captions→grade→review→publish.
 
+360 ingest: a dual-fisheye Insta360 source (`.insv`, or any file with 2 lens streams) is auto-detected in `run_footage` and reframed to flat 9:16 BEFORE the normal pipeline (`ops/spherical.py`): stitch to equirect (`v360=dfisheye:e`) → **virtual cameraman** `op_pick_view_360` (saliency = optical-flow + Laplacian, latitude-weighted; AutoCam-style DP over yaw bins for a smooth path) → `op_reframe_360` renders a flat view panning along that path (`v360=dfisheye:flat` driven by `sendcmd`). Limitation: ffmpeg has no IMU, so the horizon is not gyro-locked — for production stitch + FlowState horizon lock, swap `op_reframe_360`'s ffmpeg call for the approval-gated Insta360 Media SDK (github.com/Insta360Develop/Desktop-MediaSDK-Cpp). Reel length is capped by `edit.max_total_s`.
+
 ---
 
 ## 6. Testing & verification (do this, always)

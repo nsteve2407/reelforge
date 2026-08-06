@@ -49,6 +49,20 @@ def op_select_clips(ctx: OpContext, highlights: list[Highlight], profile) -> OpR
         segs = [head] + tail
     else:
         segs = sorted(segs, key=lambda s: s.start_s)
+    max_total = getattr(profile.edit, "max_total_s", 0.0) or 0.0
+    if max_total > 0:
+        capped, used = [], 0.0
+        for s in segs:
+            remain = max_total - used
+            if remain <= 0.5:      # no room for another meaningful clip
+                break
+            dur = s.end_s - s.start_s
+            if dur > remain:       # trim the last clip to fit the cap
+                s = Segment(s.start_s, s.start_s + remain)
+                dur = remain
+            capped.append(s)
+            used += dur
+        segs = capped or segs[:1]
     return OpResult(outputs={"segments": segs}, metrics={"n_selected": float(len(segs))},
                     message=f"selected {len(segs)} clip(s)")
 

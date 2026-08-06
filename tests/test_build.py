@@ -29,6 +29,17 @@ def test_select_clips_chronological(ctx):
     assert [s.start_s for s in segs] == [1.0, 10.0]
 
 
+def test_select_clips_max_total_cap(ctx):
+    # two 6s clips = 12s, but the cap trims the total to 8s
+    prof = ContentProfile(id="t", edit={"length_s": [6, 6], "clips_per_video": [1, 2],
+                                        "hook_first": False, "max_total_s": 8.0})
+    hi = [Highlight(0.0, 6.0, 0.9), Highlight(20.0, 26.0, 0.8)]
+    segs = build.op_select_clips(ctx, hi, prof).outputs["segments"]
+    total = sum(s.duration for s in segs)
+    assert total <= 8.0 + 1e-6
+    assert len(segs) >= 1
+
+
 def test_build_ass():
     caps = [Caption(0.0, 1.5, "hello"), Caption(1.5, 3.0, "world")]
     ass = build.build_ass(caps, "karaoke_bold", 1080, 1920)

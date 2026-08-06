@@ -32,8 +32,9 @@ understand:
 
 edit:
   aspect_ratio: "9:16"
-  length_s: [15, 45]
-  clips_per_video: [2, 4]
+  length_s: [6, 12]              # short punchy highlights
+  clips_per_video: [1, 2]
+  max_total_s: 16               # hard cap: reels stay <=16s
   hook_first: true
   reframe: subject_track
   captions:

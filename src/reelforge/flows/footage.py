@@ -20,7 +20,7 @@ from ..core.profile import ContentProfile, SourceMode
 from ..core.state import Ledger
 from ..core.storage import Storage
 from ..core.types import SignalTrack
-from ..ops import ingest, understand, build, review, learn, caption
+from ..ops import ingest, understand, build, review, learn, caption, spherical
 from ..ops import generate as G
 from ..ops import publish as pub
 
@@ -67,6 +67,9 @@ def run_footage(
 
     try:
         ledger.update_run(run_id, "ingesting")
+        # 360 dual-fisheye source? stitch + auto-reframe to a flat 9:16 view first.
+        tw, th = profile.edit.target_w_h
+        input_path = spherical.reframe_if_360(ctx, input_path, w=tw, h=th)
         hook = learn.op_select_hook(ctx).outputs["hook"]
         ledger.update_run(run_id, "ingesting", {"hook": hook})
         info = ingest.op_probe(ctx, input_path).outputs["media"]

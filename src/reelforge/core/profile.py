@@ -103,6 +103,7 @@ class Edit(_Base):
     aspect_ratio: str = "9:16"
     length_s: list[float] = Field(default_factory=lambda: [15.0, 45.0])
     clips_per_video: list[int] = Field(default_factory=lambda: [1, 3])
+    max_total_s: float = 0.0     # hard cap on total reel length (0 = no cap)
     hook_first: bool = True
     reframe: str = "center"
     captions: Captions = Field(default_factory=Captions)
